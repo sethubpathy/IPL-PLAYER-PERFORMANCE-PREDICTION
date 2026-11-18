@@ -97,18 +97,17 @@ def players():
 
 @app.route('/player/<player_name>')
 def player_detail(player_name):
-    """Detailed Profile of an Individual Player."""
-    career = data_service.get_player_career(player_name)
-    if not career:
+    """Detailed Career Profile of an Individual Player with 2008-2023 Season Filtering."""
+    selected_season = request.args.get('season', 'All').strip()
+    profile = data_service.get_player_profile(player_name, season=selected_season)
+    if not profile:
         return render_template('404.html', message=f"Player '{player_name}' not found."), 404
-
-    # If player has RF predictions, load them too
-    pred_data = data_service.get_player_predictions(player_name) if career['has_predictions'] else None
 
     return render_template(
         'player_detail.html',
-        career=career,
-        pred_data=pred_data
+        profile=profile,
+        career=profile,
+        pred_data=profile['rf']['data']
     )
 
 

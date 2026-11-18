@@ -1,144 +1,308 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ career.player }} - Career Profile | IPL ML{% endblock %}
+{% block title %}{{ profile.player }} - {% if profile.is_season_filtered %}Season {{ profile.selected_season }}{% else %}Career Profile{% endif %} | IPL ML{% endblock %}
+
+{% block verification_banner %}
+<!-- Premium Verification Banner (Option C) -->
+<div class="transparency-banner d-flex align-items-start justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-start gap-3">
+        <div class="verification-shield-icon">
+            <i class="bi bi-shield-fill-check fs-2 text-warning"></i>
+        </div>
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <h6 class="fw-bold mb-0" style="color: var(--ipl-gold);">
+                    Verified Precomputed Model Evaluation Mode (Option C)
+                </h6>
+                <span class="badge" style="background: rgba(0, 229, 255, 0.15); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3); font-size: 0.72rem;">
+                    <i class="bi bi-patch-check-fill text-info"></i> EMPIRICAL INTEGRITY
+                </span>
+            </div>
+            <p class="mb-0 small text-muted">
+                This Player Career Profile is powered by the complete <strong>2008–2023 historical IPL performance dataset</strong> (21,716 match performances). Random Forest predictions are strictly restricted to their authentic <strong>2021–2023 held-out test set</strong>. Real-time hypothetical predictions are disabled to preserve verified historical accuracy.
+            </p>
+        </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('model_analysis') }}" class="btn btn-sm btn-ipl-outline text-nowrap d-none d-md-block">
+            Model Specs <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
 <!-- Player Header Card -->
 <div class="ipl-card mb-4">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
-            <div class="ipl-brand-icon" style="width: 58px; height: 58px; font-size: 1.8rem;">
+            <div class="ipl-brand-icon" style="width: 62px; height: 62px; font-size: 1.9rem;">
                 <i class="bi bi-person-fill"></i>
             </div>
             <div>
-                <h2 class="fw-bold mb-1">{{ career.player }}</h2>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h2 class="fw-bold mb-0 text-white">{{ profile.player }}</h2>
+                    {% if profile.is_season_filtered %}
+                    <span class="badge" style="background: rgba(255, 183, 3, 0.15); color: var(--ipl-gold); border: 1px solid rgba(255, 183, 3, 0.4); font-size: 0.85rem;">
+                        IPL {{ profile.selected_season }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
                     <span class="badge bg-dark border text-muted">
-                        <i class="bi bi-calendar-range"></i> IPL {{ career.first_season }} – {{ career.last_season }}
+                        <i class="bi bi-calendar-range"></i> Career: IPL {{ profile.first_season }} – {{ profile.last_season }}
                     </span>
                     <span class="badge bg-dark border text-muted">
-                        <i class="bi bi-controller"></i> {{ career.total_matches }} Matches Played
+                        <i class="bi bi-controller"></i> {{ profile.career_totals.matches }} Total Career Matches
                     </span>
-                    {% if career.has_predictions %}
-                    <span class="badge"
-                        style="background: rgba(0, 229, 255, 0.15); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
-                        <i class="bi bi-cpu"></i> RF Predictions Available (2021–2023)
+                    {% if profile.has_predictions %}
+                    <span class="badge" style="background: rgba(0, 229, 255, 0.12); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
+                        <i class="bi bi-cpu-fill"></i> RF Test Predictions Available (2021–2023)
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary opacity-75">
+                        <i class="bi bi-archive-fill"></i> Historical Era Only
                     </span>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <div class="d-flex gap-2">
-            {% if career.has_predictions %}
-            <a href="{{ url_for('predictions', player=career.player) }}" class="btn btn-ipl-gold">
-                <i class="bi bi-cpu-fill"></i> View Model Predictions
+        <div class="d-flex gap-2 flex-wrap">
+            {% if profile.has_predictions %}
+            <a href="{{ url_for('predictions', player=profile.player, season=profile.selected_season if profile.selected_season in ['2021', '2022', '2023'] else 'All') }}" class="btn btn-ipl-gold">
+                <i class="bi bi-cpu-fill"></i> View RF Predictions
             </a>
             {% endif %}
-            <a href="{{ url_for('compare', p1=career.player) }}" class="btn btn-ipl-outline">
+            <a href="{{ url_for('compare', p1=profile.player) }}" class="btn btn-ipl-outline">
                 <i class="bi bi-arrow-left-right"></i> Compare Player
             </a>
         </div>
     </div>
 </div>
 
-<!-- Key Stat Cards -->
+<!-- Season Filter Toolbar (2008 to 2023 Complete Historical Coverage) -->
+<div class="ipl-card mb-4 p-3 filter-toolbar">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <!-- Dropdown Form -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label small text-muted fw-bold mb-0 text-nowrap">
+                <i class="bi bi-funnel-fill text-info"></i> Career Season Filter:
+            </label>
+            <form method="GET" action="{{ url_for('player_detail', player_name=profile.player) }}" class="d-inline-flex align-items-center gap-2">
+                <select name="season" class="form-select ipl-select py-1 px-3" onchange="this.form.submit()" style="min-width: 210px;">
+                    <option value="All" {% if not profile.is_season_filtered %}selected{% endif %}>
+                        All Seasons (2008–2023 Career)
+                    </option>
+                    {% for s in profile.available_seasons %}
+                    <option value="{{ s }}" {% if profile.selected_season == s|string %}selected{% endif %}>
+                        IPL Season {{ s }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <noscript>
+                    <button type="submit" class="btn btn-sm btn-ipl-gold">Filter</button>
+                </noscript>
+            </form>
+        </div>
+
+        <!-- Quick Season Pills -->
+        <div class="d-flex align-items-center gap-1 flex-wrap">
+            <span class="small text-muted me-2 d-none d-md-inline">Seasons:</span>
+            <a href="{{ url_for('player_detail', player_name=profile.player, season='All') }}" 
+               class="player-pill {% if not profile.is_season_filtered %}active{% endif %}">
+                All
+            </a>
+            {% for s in profile.available_seasons|reverse %}
+            {% if loop.index <= 8 %}
+            <a href="{{ url_for('player_detail', player_name=profile.player, season=s) }}" 
+               class="player-pill {% if profile.selected_season == s|string %}active{% endif %}">
+                {{ s }}
+            </a>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Active Filter Notification -->
+    {% if profile.is_season_filtered %}
+    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small">
+            <i class="bi bi-info-circle-fill text-warning me-1"></i>
+            Displaying statistics for <strong>IPL Season {{ profile.selected_season }}</strong> ({{ profile.stats.matches }} matches). 
+            Career total is <span class="text-white fw-bold">{{ profile.career_totals.runs }} runs &bull; {{ profile.career_totals.wickets }} wickets</span>.
+        </div>
+        <a href="{{ url_for('player_detail', player_name=profile.player, season='All') }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;">
+            <i class="bi bi-x-circle"></i> Reset to Full Career
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Key Stat Cards (Season-Filtered or Overall Career) -->
 <div class="row g-3 mb-4">
-    <!-- Batting Summary -->
+    <!-- Batting Summary Card -->
     <div class="col-lg-4 col-md-6">
         <div class="stat-widget stat-border-gold">
             <i class="bi bi-fire stat-icon"></i>
-            <div class="stat-label">Batting Production</div>
-            <div class="stat-value text-warning">{{ career.total_runs }} <span
-                    class="fs-6 fw-normal text-muted">runs</span></div>
+            <div class="stat-label">
+                Batting Production {% if profile.is_season_filtered %}({{ profile.selected_season }}){% else %}(Career){% endif %}
+            </div>
+            <div class="stat-value text-warning">
+                {{ profile.stats.runs }} <span class="fs-6 fw-normal text-muted">runs</span>
+            </div>
             <div class="stat-sub mt-2">
-                Strike Rate: <strong>{{ career.batting_sr }}</strong> &bull; Balls: {{ career.total_balls_faced }}<br>
-                Fours: <strong>{{ career.total_fours }}</strong> &bull; Sixes: <strong>{{ career.total_sixes }}</strong>
+                Strike Rate: <strong>{{ profile.stats.batting_sr }}</strong> &bull; Balls: {{ profile.stats.balls_faced }}<br>
+                Fours: <strong>{{ profile.stats.fours }}</strong> &bull; Sixes: <strong>{{ profile.stats.sixes }}</strong>
             </div>
         </div>
     </div>
 
-    <!-- Bowling Summary -->
+    <!-- Bowling Summary Card -->
     <div class="col-lg-4 col-md-6">
         <div class="stat-widget stat-border-cyan">
             <i class="bi bi-tornado stat-icon"></i>
-            <div class="stat-label">Bowling Production</div>
-            <div class="stat-value text-info">{{ career.total_wickets }} <span
-                    class="fs-6 fw-normal text-muted">wickets</span></div>
+            <div class="stat-label">
+                Bowling Production {% if profile.is_season_filtered %}({{ profile.selected_season }}){% else %}(Career){% endif %}
+            </div>
+            <div class="stat-value text-info">
+                {{ profile.stats.wickets }} <span class="fs-6 fw-normal text-muted">wickets</span>
+            </div>
             <div class="stat-sub mt-2">
-                Economy Rate: <strong>{{ career.bowling_econ }}</strong> &bull; Balls: {{ career.total_balls_bowled
-                }}<br>
-                Bowling Average: <strong>{{ career.bowling_avg }}</strong>
+                Economy Rate: <strong>{{ profile.stats.bowling_econ }}</strong> &bull; Balls: {{ profile.stats.balls_bowled }}<br>
+                Bowling Average: <strong>{{ profile.stats.bowling_avg }}</strong> &bull; Conceded: {{ profile.stats.runs_conceded }}r
             </div>
         </div>
     </div>
 
-    <!-- Performance Score Summary -->
+    <!-- Fantasy Performance Metric Card -->
     <div class="col-lg-4 col-md-12">
         <div class="stat-widget stat-border-green">
             <i class="bi bi-award stat-icon"></i>
-            <div class="stat-label">Performance Metric (Runs + 20*Wkts)</div>
-            <div class="stat-value text-success">{{ career.avg_performance_score }} <span
-                    class="fs-6 fw-normal text-muted">avg pts</span></div>
+            <div class="stat-label">
+                Performance Score (Runs + 20*Wkts)
+            </div>
+            <div class="stat-value text-success">
+                {{ profile.stats.avg_performance_score }} <span class="fs-6 fw-normal text-muted">avg pts</span>
+            </div>
             <div class="stat-sub mt-2">
-                Career High Match Score: <strong>{{ career.max_performance_score }}</strong> pts<br>
-                Total Impact Index: <strong>{{ (career.total_runs + 20 * career.total_wickets)|int }}</strong> total pts
+                Peak Match Score: <strong>{{ profile.stats.max_performance_score }}</strong> pts<br>
+                Matches Evaluated: <strong>{{ profile.stats.matches }}</strong> &bull; Total Fantasy Impact: <strong>{{ profile.stats.total_impact_score }}</strong> pts
             </div>
         </div>
     </div>
 </div>
 
-<!-- Predictions Preview if available -->
-{% if pred_data %}
+<!-- Random Forest Prediction Status / Results Card -->
 <div class="ipl-card mb-4" style="border: 1px solid var(--ipl-border-glow);">
     <div class="ipl-card-header">
         <h5 class="ipl-card-title">
-            <i class="bi bi-cpu text-info"></i> Random Forest Model Evaluation for {{ career.player }}
+            <i class="bi bi-cpu-fill text-info"></i> Random Forest Model Evaluation
         </h5>
-        <a href="{{ url_for('predictions', player=career.player) }}" class="btn btn-sm btn-ipl-gold">
-            Open Full Timeline & 12 Features <i class="bi bi-arrow-right"></i>
-        </a>
+        {% if profile.rf.status == 'AVAILABLE' %}
+        <span class="badge" style="background: rgba(0, 229, 255, 0.15); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
+            Test Split Evaluated (2021–2023)
+        </span>
+        {% elif profile.rf.status == 'PRE_TEST_ERA' %}
+        <span class="badge bg-secondary border">
+            Pre-Test Baseline Era
+        </span>
+        {% else %}
+        <span class="badge bg-dark border text-muted">
+            Non-Test Split
+        </span>
+        {% endif %}
     </div>
-    <div class="row g-3 text-center">
+
+    {% if profile.rf.status == 'AVAILABLE' and profile.rf.data %}
+    <!-- Available RF Test Predictions Display -->
+    <div class="row g-3 text-center mb-3">
         <div class="col-md-3 col-6">
-            <div class="small text-muted">Predicted Matches (2021-2023)</div>
-            <div class="fs-4 fw-bold text-white">{{ pred_data.summary.total_predicted_matches }}</div>
+            <div class="small text-muted">Predicted Matches Evaluated</div>
+            <div class="fs-4 fw-bold text-white">{{ profile.rf.data.summary.total_predicted_matches }}</div>
         </div>
         <div class="col-md-3 col-6">
             <div class="small text-muted">Model Avg Predicted Score</div>
-            <div class="fs-4 fw-bold text-info">{{ pred_data.summary.avg_predicted }}</div>
+            <div class="fs-4 fw-bold text-info">{{ profile.rf.data.summary.avg_predicted }}</div>
         </div>
         <div class="col-md-3 col-6">
             <div class="small text-muted">Actual Avg Score</div>
-            <div class="fs-4 fw-bold text-warning">{{ pred_data.summary.avg_actual }}</div>
+            <div class="fs-4 fw-bold text-warning">{{ profile.rf.data.summary.avg_actual }}</div>
         </div>
         <div class="col-md-3 col-6">
             <div class="small text-muted">Player Specific MAE</div>
-            <div class="fs-4 fw-bold text-success">&plusmn;{{ pred_data.summary.mae }}</div>
+            <div class="fs-4 fw-bold text-success">&plusmn;{{ profile.rf.data.summary.mae }}</div>
         </div>
     </div>
-</div>
-{% endif %}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top border-secondary border-opacity-25">
+        <div class="small text-muted">
+            <i class="bi bi-info-circle text-info"></i> {{ profile.rf.note }}
+        </div>
+        <a href="{{ url_for('predictions', player=profile.player, season=profile.selected_season if profile.selected_season in ['2021', '2022', '2023'] else 'All') }}" class="btn btn-sm btn-ipl-gold">
+            Open Full Timeline & 12 Features <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
 
-<!-- Season Progression Chart -->
+    {% elif profile.rf.status == 'PRE_TEST_ERA' %}
+    <!-- Pre-Test Era Historical Notice -->
+    <div class="p-3 rounded" style="background: rgba(14, 22, 38, 0.7); border: 1px dashed rgba(0, 229, 255, 0.2);">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-clock-history fs-3 text-info"></i>
+            <div>
+                <h6 class="fw-bold text-white mb-1">Pre-Test Historical Baseline Era (Season {{ profile.selected_season }})</h6>
+                <p class="small text-muted mb-2">
+                    {{ profile.rf.note }} Matches played in Season {{ profile.selected_season }} were part of the historical training dataset. Precomputed Random Forest predictions are strictly available for held-out test seasons (2021–2023).
+                </p>
+                {% if profile.has_predictions %}
+                <a href="{{ url_for('predictions', player=profile.player) }}" class="btn btn-sm btn-ipl-outline">
+                    View {{ profile.player }}'s 2021–2023 RF Predictions <i class="bi bi-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Player not in RF test set -->
+    <div class="p-3 rounded" style="background: rgba(14, 22, 38, 0.7); border: 1px dashed rgba(255, 255, 255, 0.1);">
+        <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-info-circle fs-3 text-muted"></i>
+            <div>
+                <h6 class="fw-bold text-white mb-1">Historical Career Dataset Coverage</h6>
+                <p class="small text-muted mb-0">
+                    {{ profile.rf.note }} Full historical match performance logs across {{ profile.career_totals.span }} are preserved below.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Career Season Progression Chart (Full Historical Curve 2008-2023) -->
 <div class="ipl-card mb-4">
     <div class="ipl-card-header">
         <h5 class="ipl-card-title">
-            <i class="bi bi-bar-chart-line text-warning"></i> Season-by-Season Performance Trend
+            <i class="bi bi-bar-chart-line text-warning"></i> Historical Performance Trend (All {{ profile.seasons|length }} Seasons)
         </h5>
-        <span class="badge bg-secondary">{{ career.seasons|length }} IPL Seasons</span>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-secondary">{{ profile.career_totals.span }}</span>
+        </div>
     </div>
-    <div style="height: 350px;">
+    <div style="height: 360px;">
         <canvas id="seasonProgressChart"></canvas>
+    </div>
+    <div class="mt-2 text-center small text-muted">
+        Chart displays complete historical career trajectory across all seasons (Runs, Wickets, and Composite Fantasy Performance).
     </div>
 </div>
 
-<!-- Season Breakdown Table -->
-<div class="ipl-card">
+<!-- Season-by-Season Career Breakdown Table -->
+<div class="ipl-card mb-4">
     <div class="ipl-card-header">
         <h5 class="ipl-card-title">
-            <i class="bi bi-table text-info"></i> Season Statistics Breakdown
+            <i class="bi bi-table text-info"></i> Career Season-by-Season Breakdown ({{ profile.first_season }}–{{ profile.last_season }})
         </h5>
+        <span class="badge bg-dark border text-muted">{{ profile.seasons|length }} Active Seasons</span>
     </div>
     <div class="ipl-table-container">
         <table class="ipl-table">
@@ -146,19 +310,101 @@
                 <tr>
                     <th>Season</th>
                     <th>Matches</th>
-                    <th>Batting Runs</th>
+                    <th>Runs Scored</th>
+                    <th>Balls Faced</th>
+                    <th>Strike Rate</th>
                     <th>Wickets</th>
-                    <th>Avg Performance Score</th>
+                    <th>Economy</th>
+                    <th>Avg Performance</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% for s in career.seasons %}
-                <tr>
-                    <td><strong>IPL {{ s.season }}</strong></td>
+                {% for s in profile.seasons %}
+                <tr {% if profile.selected_season == s.season|string %}style="background: rgba(0, 229, 255, 0.08); border-left: 3px solid var(--ipl-cyan);"{% endif %}>
+                    <td>
+                        <strong>IPL {{ s.season }}</strong>
+                        {% if profile.selected_season == s.season|string %}
+                        <span class="badge bg-info text-dark ms-1">Active</span>
+                        {% endif %}
+                    </td>
                     <td>{{ s.matches }}</td>
                     <td><span class="text-warning fw-bold">{{ s.runs }}</span></td>
+                    <td>{{ s.balls_faced }}</td>
+                    <td>{{ s.strike_rate }}</td>
                     <td><span class="text-info fw-bold">{{ s.wickets }}</span></td>
+                    <td>{{ s.economy }}</td>
                     <td><span class="text-success fw-bold">{{ s.avg_performance }}</span></td>
+                    <td>
+                        <a href="{{ url_for('player_detail', player_name=profile.player, season=s.season) }}" 
+                           class="btn btn-sm {% if profile.selected_season == s.season|string %}btn-ipl-gold{% else %}btn-outline-light{% endif %} py-0 px-2" 
+                           style="font-size: 0.78rem;">
+                            Filter Season
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Match-by-Match Logs Table (Historical Match Records) -->
+<div class="ipl-card mb-4">
+    <div class="ipl-card-header">
+        <h5 class="ipl-card-title">
+            <i class="bi bi-journal-text text-warning"></i> 
+            Match Performance Logs {% if profile.is_season_filtered %}(Season {{ profile.selected_season }}){% else %}(Recent Matches){% endif %}
+        </h5>
+        <span class="badge bg-secondary">{{ profile.match_logs|length }} matches displayed</span>
+    </div>
+    <div class="ipl-table-container">
+        <table class="ipl-table">
+            <thead>
+                <tr>
+                    <th>Date / Match ID</th>
+                    <th>Season</th>
+                    <th>Venue / Matchup</th>
+                    <th>Batting Figures</th>
+                    <th>Bowling Figures</th>
+                    <th>Performance Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in profile.match_logs %}
+                <tr>
+                    <td>
+                        <strong>{{ m.date }}</strong>
+                        <div class="small text-muted">ID: {{ m.match_id }}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark border text-light">{{ m.season }}</span>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-white">{{ m.venue }}</div>
+                        <div class="small text-muted">{{ m.team_matchup }}</div>
+                    </td>
+                    <td>
+                        <div class="small">
+                            <span class="text-warning fw-bold">{{ m.batting_runs }}</span> runs 
+                            <span class="text-muted">({{ m.balls_faced }}b, SR: {{ m.strike_rate }})</span>
+                        </div>
+                        <div class="small text-muted">
+                            {{ m.fours }} fours, {{ m.sixes }} sixes
+                        </div>
+                    </td>
+                    <td>
+                        <div class="small">
+                            <span class="text-info fw-bold">{{ m.wickets }}</span> wkts 
+                            <span class="text-muted">({{ m.runs_conceded }}r, Econ: {{ m.economy_rate }})</span>
+                        </div>
+                        <div class="small text-muted">
+                            {{ m.balls_bowled }} balls bowled
+                        </div>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-success fs-6">{{ m.performance_score }}</span>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -170,9 +416,8 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var seasonsData = {{ career.seasons| tojson
-    }};
-    renderSeasonProgressChart('seasonProgressChart', seasonsData);
+        var seasonsData = {{ profile.seasons|tojson }};
+        renderSeasonProgressChart('seasonProgressChart', seasonsData);
     });
 </script>
 {% endblock %}

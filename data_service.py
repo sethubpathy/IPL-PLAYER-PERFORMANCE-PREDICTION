@@ -303,6 +303,230 @@ class DataService:
         self.career_cache[player_name.lower()] = res
         return res
 
+    def get_player_profile(self, player_name, season=None):
+        """
+        Retrieves comprehensive player career profile from the complete 2008-2023 historical dataset.
+        Supports season filtering across all 2008-2023 seasons without restricting to RF test years.
+        Strictly restricts Random Forest predictions to their actual held-out test seasons (2021-2023).
+        """
+        self.load_data()
+        if self.performance_df is None:
+            return None
+
+        df_player = self.performance_df[self.performance_df['player'].str.lower() == player_name.lower()]
+        if df_player.empty:
+            return None
+
+        real_name = df_player.iloc[0]['player']
+        available_seasons = sorted(df_player['season'].unique().tolist())
+
+        # Complete season-by-season career breakdown (2008-2023)
+        season_breakdown = []
+        for s, sdf in df_player.groupby('season'):
+            s_scores = sdf['performance_score'].dropna().tolist()
+            runs = int(sdf['batting_runs'].sum())
+            bf = int(sdf['balls_faced'].sum())
+            wkts = int(sdf['wickets'].sum())
+            rc = int(sdf['runs_conceded'].sum())
+            bb = int(sdf['balls_bowled'].sum())
+            season_breakdown.append({
+                'season': int(s),
+                'matches': len(sdf),
+                'runs': runs,
+                'balls_faced': bf,
+                'strike_rate': round(runs / bf * 100, 2) if bf > 0 else 0,
+                'fours': int(sdf['fours'].sum()),
+                'sixes': int(sdf['sixes'].sum()),
+                'wickets': wkts,
+                'runs_conceded': rc,
+                'balls_bowled': bb,
+                'economy': round(rc / (bb / 6), 2) if bb > 0 else 0,
+                'bowling_avg': round(rc / wkts, 2) if wkts > 0 else 0,
+                'avg_performance': round(float(np.mean(s_scores)), 2) if s_scores else 0,
+                'max_performance': round(float(np.max(s_scores)), 2) if s_scores else 0
+            })
+        season_breakdown = sorted(season_breakdown, key=lambda x: x['season'])
+
+        # Career Overall Totals across all played seasons (2008-2023)
+        career_matches = len(df_player)
+        career_runs = int(df_player['batting_runs'].sum())
+        career_bf = int(df_player['balls_faced'].sum())
+        career_fours = int(df_player['fours'].sum())
+        career_sixes = int(df_player['sixes'].sum())
+        career_sr = round((career_runs / career_bf * 100), 2) if career_bf > 0 else 0
+
+        career_wkts = int(df_player['wickets'].sum())
+        career_rc = int(df_player['runs_conceded'].sum())
+        career_bb = int(df_player['balls_bowled'].sum())
+        career_econ = round((career_rc / (career_bb / 6)), 2) if career_bb > 0 else 0
+        career_bavg = round((career_rc / career_wkts), 2) if career_wkts > 0 else 0
+
+        career_scores = df_player['performance_score'].dropna().tolist()
+        career_avg_score = round(float(np.mean(career_scores)), 2) if career_scores else 0
+        career_max_score = round(float(np.max(career_scores)), 2) if career_scores else 0
+
+        # Handle Season Filtering
+        is_filtered = False
+        selected_season_str = 'All'
+        df_target = df_player
+
+        if season and str(season).strip().lower() not in ('all', '', 'none'):
+            try:
+                s_int = int(season)
+                df_filtered = df_player[df_player['season'] == s_int]
+                if not df_filtered.empty:
+                    df_target = df_filtered
+                    is_filtered = True
+                    selected_season_str = str(s_int)
+            except ValueError:
+                pass
+
+        # Target stats (filtered season or full career)
+        target_matches = len(df_target)
+        target_runs = int(df_target['batting_runs'].sum())
+        target_bf = int(df_target['balls_faced'].sum())
+        target_fours = int(df_target['fours'].sum())
+        target_sixes = int(df_target['sixes'].sum())
+        target_sr = round((target_runs / target_bf * 100), 2) if target_bf > 0 else 0
+
+        target_wkts = int(df_target['wickets'].sum())
+        target_rc = int(df_target['runs_conceded'].sum())
+        target_bb = int(df_target['balls_bowled'].sum())
+        target_econ = round((target_rc / (target_bb / 6)), 2) if target_bb > 0 else 0
+        target_bavg = round((target_rc / target_wkts), 2) if target_wkts > 0 else 0
+
+        target_scores = df_target['performance_score'].dropna().tolist()
+        target_avg_score = round(float(np.mean(target_scores)), 2) if target_scores else 0
+        target_max_score = round(float(np.max(target_scores)), 2) if target_scores else 0
+
+        # Detailed match performance logs for target scope (sorted chronologically descending)
+        df_sorted_matches = df_target.sort_values(by=['season', 'start_date'], ascending=False)
+        match_logs = []
+        for _, row in df_sorted_matches.iterrows():
+            mid = row['match_id']
+            meta = self.venue_lookup.get(mid, {})
+            runs = int(row.get('batting_runs', 0))
+            bf = int(row.get('balls_faced', 0))
+            sr = round(float(row.get('strike_rate', 0)), 1)
+            wkts = int(row.get('wickets', 0))
+            rc = int(row.get('runs_conceded', 0))
+            bb = int(row.get('balls_bowled', 0))
+            econ = round(float(row.get('economy_rate', 0)), 2)
+            score = round(float(row.get('performance_score', 0)), 2)
+
+            match_logs.append({
+                'match_id': mid,
+                'season': int(row['season']),
+                'date': row['start_date'],
+                'venue': meta.get('venue', 'IPL Venue'),
+                'team_matchup': meta.get('team_matchup', 'IPL Match'),
+                'batting_runs': runs,
+                'balls_faced': bf,
+                'fours': int(row.get('fours', 0)),
+                'sixes': int(row.get('sixes', 0)),
+                'strike_rate': sr,
+                'wickets': wkts,
+                'runs_conceded': rc,
+                'balls_bowled': bb,
+                'economy_rate': econ,
+                'performance_score': score
+            })
+
+        # Random Forest Model Test Results Integration (Strictly 2021-2023)
+        has_predictions = real_name in self.players_with_predictions
+        rf_data = None
+        rf_status = 'NOT_APPLICABLE'
+        rf_note = ''
+
+        if has_predictions:
+            if not is_filtered:
+                # All seasons: show overall test set performance (2021-2023)
+                rf_data = self.get_player_predictions(real_name, season=None)
+                rf_status = 'AVAILABLE'
+                rf_note = "Showing precomputed Random Forest predictions across all held-out test seasons (2021–2023)."
+            else:
+                s_int = int(selected_season_str)
+                if s_int in [2021, 2022, 2023]:
+                    rf_data = self.get_player_predictions(real_name, season=s_int)
+                    if rf_data and rf_data['matches']:
+                        rf_status = 'AVAILABLE'
+                        rf_note = f"Showing Random Forest test-set predictions for Season {s_int}."
+                    else:
+                        rf_status = 'NO_MATCHES_IN_SEASON'
+                        rf_note = f"No test prediction records found for Season {s_int}."
+                else:
+                    rf_status = 'PRE_TEST_ERA'
+                    rf_note = f"Season {s_int} was part of historical baseline training (2008–2020). Random Forest model test predictions are strictly restricted to the 2021–2023 evaluation set to maintain 100% empirical validity."
+        else:
+            rf_status = 'NOT_APPLICABLE'
+            rf_note = f"{real_name} does not feature in the 2021–2023 Random Forest test evaluation split."
+
+        active_stats = {
+            'matches': target_matches,
+            'runs': target_runs,
+            'balls_faced': target_bf,
+            'fours': target_fours,
+            'sixes': target_sixes,
+            'batting_sr': target_sr,
+            'wickets': target_wkts,
+            'runs_conceded': target_rc,
+            'balls_bowled': target_bb,
+            'bowling_econ': target_econ,
+            'bowling_avg': target_bavg,
+            'avg_performance_score': target_avg_score,
+            'max_performance_score': target_max_score,
+            'total_impact_score': int(target_runs + 20 * target_wkts)
+        }
+
+        return {
+            'player': real_name,
+            'selected_season': selected_season_str,
+            'is_season_filtered': is_filtered,
+            'available_seasons': available_seasons,
+            'first_season': int(df_player['season'].min()),
+            'last_season': int(df_player['season'].max()),
+            'has_predictions': has_predictions,
+
+            # Active stats in 'stats' dict for template convenience
+            'stats': active_stats,
+
+            # Active stats for selected view (filtered season or full career)
+            'total_matches': target_matches,
+            'total_runs': target_runs,
+            'total_balls_faced': target_bf,
+            'total_fours': target_fours,
+            'total_sixes': target_sixes,
+            'batting_sr': target_sr,
+            'total_wickets': target_wkts,
+            'total_runs_conceded': target_rc,
+            'total_balls_bowled': target_bb,
+            'bowling_econ': target_econ,
+            'bowling_avg': target_bavg,
+            'avg_performance_score': target_avg_score,
+            'max_performance_score': target_max_score,
+            'total_impact_score': int(target_runs + 20 * target_wkts),
+
+            # Persistent career totals across all seasons
+            'career_totals': {
+                'matches': career_matches,
+                'runs': career_runs,
+                'wickets': career_wkts,
+                'avg_performance_score': career_avg_score,
+                'span': f"{int(df_player['season'].min())} – {int(df_player['season'].max())}"
+            },
+
+            # Complete historical career season breakdown for chart & table
+            'seasons': season_breakdown,
+            'match_logs': match_logs,
+
+            # Random Forest metadata & results
+            'rf': {
+                'data': rf_data,
+                'status': rf_status,
+                'note': rf_note
+            }
+        }
+
     def get_all_players_catalog(self, limit=None):
         self.load_data()
         catalog = []

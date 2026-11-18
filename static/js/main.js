@@ -4,7 +4,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize common tooltips if bootstrap is available
+    // Initialize tooltips if Bootstrap is available
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -48,11 +48,24 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /**
+ * Helper to safely destroy existing chart instance on canvas
+ */
+function safeDestroyChart(canvasId) {
+    if (typeof Chart !== 'undefined' && Chart.getChart) {
+        var existing = Chart.getChart(canvasId);
+        if (existing) {
+            existing.destroy();
+        }
+    }
+}
+
+/**
  * Render Feature Importance Horizontal Bar Chart
  */
 function renderFeatureImportanceChart(canvasId, featuresData) {
     var ctx = document.getElementById(canvasId);
     if (!ctx) return;
+    safeDestroyChart(canvasId);
 
     var labels = featuresData.map(function (f) { return f.name; });
     var values = featuresData.map(function (f) { return f.importance; });
@@ -110,6 +123,7 @@ function renderFeatureImportanceChart(canvasId, featuresData) {
 function renderPredictionsTimelineChart(canvasId, matchesData) {
     var ctx = document.getElementById(canvasId);
     if (!ctx) return;
+    safeDestroyChart(canvasId);
 
     var labels = matchesData.map(function (m, idx) {
         return (m.date || ('M' + (idx + 1))) + ' (' + m.season + ')';
@@ -128,7 +142,7 @@ function renderPredictionsTimelineChart(canvasId, matchesData) {
                     borderColor: '#ffb703',
                     backgroundColor: 'rgba(255, 183, 3, 0.1)',
                     pointBackgroundColor: '#ffb703',
-                    pointBorderColor: '#070b14',
+                    pointBorderColor: '#060b14',
                     pointRadius: 5,
                     pointHoverRadius: 7,
                     tension: 0.25,
@@ -140,7 +154,7 @@ function renderPredictionsTimelineChart(canvasId, matchesData) {
                     borderColor: '#00e5ff',
                     backgroundColor: 'rgba(0, 229, 255, 0.05)',
                     pointBackgroundColor: '#00e5ff',
-                    pointBorderColor: '#070b14',
+                    pointBorderColor: '#060b14',
                     pointRadius: 5,
                     pointHoverRadius: 7,
                     borderDash: [5, 5],
@@ -161,7 +175,7 @@ function renderPredictionsTimelineChart(canvasId, matchesData) {
                     labels: { color: '#f8fafc', font: { size: 12, weight: '600' } }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(14, 22, 38, 0.95)',
+                    backgroundColor: 'rgba(10, 18, 34, 0.95)',
                     titleColor: '#00e5ff',
                     bodyColor: '#f8fafc',
                     borderColor: 'rgba(0, 229, 255, 0.3)',
@@ -190,6 +204,7 @@ function renderPredictionsTimelineChart(canvasId, matchesData) {
 function renderErrorDistributionChart(canvasId, distData) {
     var ctx = document.getElementById(canvasId);
     if (!ctx) return;
+    safeDestroyChart(canvasId);
 
     new Chart(ctx, {
         type: 'bar',
@@ -233,13 +248,14 @@ function renderErrorDistributionChart(canvasId, distData) {
 }
 
 /**
- * Render Season Career Progression Chart
+ * Render Season Career Progression Chart across Complete 2008-2023 Dataset
  */
 function renderSeasonProgressChart(canvasId, seasonsData) {
     var ctx = document.getElementById(canvasId);
     if (!ctx) return;
+    safeDestroyChart(canvasId);
 
-    var labels = seasonsData.map(function (s) { return s.season; });
+    var labels = seasonsData.map(function (s) { return 'IPL ' + s.season; });
     var runs = seasonsData.map(function (s) { return s.runs; });
     var wickets = seasonsData.map(function (s) { return s.wickets; });
     var avgPerf = seasonsData.map(function (s) { return s.avg_performance; });
@@ -251,9 +267,11 @@ function renderSeasonProgressChart(canvasId, seasonsData) {
             datasets: [
                 {
                     type: 'bar',
-                    label: 'Runs',
+                    label: 'Batting Runs',
                     data: runs,
-                    backgroundColor: 'rgba(255, 183, 3, 0.65)',
+                    backgroundColor: 'rgba(255, 183, 3, 0.7)',
+                    borderColor: '#ffb703',
+                    borderWidth: 1,
                     borderRadius: 4,
                     yAxisID: 'y'
                 },
@@ -261,19 +279,24 @@ function renderSeasonProgressChart(canvasId, seasonsData) {
                     type: 'bar',
                     label: 'Wickets',
                     data: wickets,
-                    backgroundColor: 'rgba(0, 229, 255, 0.65)',
+                    backgroundColor: 'rgba(0, 229, 255, 0.7)',
+                    borderColor: '#00e5ff',
+                    borderWidth: 1,
                     borderRadius: 4,
                     yAxisID: 'y'
                 },
                 {
                     type: 'line',
-                    label: 'Avg Performance Score',
+                    label: 'Avg Performance Score (Runs + 20*Wkts)',
                     data: avgPerf,
                     borderColor: '#06d6a0',
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'rgba(6, 214, 160, 0.08)',
                     pointBackgroundColor: '#06d6a0',
-                    pointRadius: 4,
+                    pointBorderColor: '#060b14',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
                     tension: 0.3,
+                    fill: false,
                     yAxisID: 'y1'
                 }
             ]
@@ -281,8 +304,22 @@ function renderSeasonProgressChart(canvasId, seasonsData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
             plugins: {
-                legend: { labels: { color: '#f8fafc' } }
+                legend: {
+                    labels: { color: '#f8fafc', font: { size: 12, weight: '600' } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 18, 34, 0.95)',
+                    titleColor: '#00e5ff',
+                    bodyColor: '#f8fafc',
+                    borderColor: 'rgba(0, 229, 255, 0.3)',
+                    borderWidth: 1,
+                    padding: 12
+                }
             },
             scales: {
                 x: {
@@ -301,7 +338,7 @@ function renderSeasonProgressChart(canvasId, seasonsData) {
                     type: 'linear',
                     display: true,
                     position: 'right',
-                    title: { display: true, text: 'Avg Score', color: '#06d6a0' },
+                    title: { display: true, text: 'Avg Score (Points)', color: '#06d6a0' },
                     grid: { drawOnChartArea: false },
                     ticks: { color: '#06d6a0' }
                 }
