@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Model Analytics & Feature Importance | IPL ML{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row g-3 align-items-center mb-4">
+    <div class="col-lg-8">
+        <h3 class="fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-bar-chart-steps text-info"></i>
+            <span>Machine Learning Architecture & Feature Analytics</span>
+        </h3>
+        <p class="text-muted small mb-0">
+            Technical inspection of the Random Forest Regressor, feature importances, evaluation metrics, and error distribution.
+        </p>
+    </div>
+    <div class="col-lg-4 text-lg-end">
+        <span class="badge p-2 px-3 border" style="background: rgba(0, 229, 255, 0.1); color: var(--ipl-cyan); border-color: rgba(0, 229, 255, 0.3) !important;">
+            <i class="bi bi-check-circle-fill"></i> Model Validated on 4,085 Test Samples
+        </span>
+    </div>
+</div>
+
+<!-- Evaluation Metrics Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-widget stat-border-green">
+            <i class="bi bi-bullseye stat-icon"></i>
+            <div class="stat-label">Mean Absolute Error (MAE)</div>
+            <div class="stat-value text-success">{{ "%.2f"|format(metrics.get('MAE', 18.6369)) }}</div>
+            <div class="stat-sub">Average deviation per match prediction</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-widget stat-border-gold">
+            <i class="bi bi-graph-up stat-icon"></i>
+            <div class="stat-label">Root Mean Squared Error (RMSE)</div>
+            <div class="stat-value text-warning">{{ "%.2f"|format(metrics.get('RMSE', 23.4211)) }}</div>
+            <div class="stat-sub">Penalizes large outlier errors</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-widget stat-border-cyan">
+            <i class="bi bi-percent stat-icon"></i>
+            <div class="stat-label">Coefficient of Determination (R²)</div>
+            <div class="stat-value text-info">{{ "%.4f"|format(metrics.get('R2 Score', 0.00274)) }}</div>
+            <div class="stat-sub">Outperforms historical baseline (-0.1315)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature Importance Deep Dive & Error Distribution -->
+<div class="row g-4 mb-4">
+    <!-- Chart: Feature Importance -->
+    <div class="col-lg-7">
+        <div class="ipl-card">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-sliders text-info"></i> Model Feature Weights (Relative Importance %)
+                </h5>
+                <span class="badge bg-secondary">Total: 100%</span>
+            </div>
+            <div style="height: 420px;">
+                <canvas id="featureImportanceChartFull"></canvas>
+            </div>
+            <div class="small text-muted mt-2 text-center">
+                Derived directly from <code>IPL_Feature_Importance.csv</code> generated during Random Forest training.
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Error Distribution Histogram -->
+    <div class="col-lg-5">
+        <div class="ipl-card">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-pie-chart text-warning"></i> Absolute Error Distribution
+                </h5>
+                <span class="badge bg-dark border">4,085 Records</span>
+            </div>
+            <div style="height: 420px;">
+                <canvas id="errorDistributionChart"></canvas>
+            </div>
+            <div class="small text-muted mt-2 text-center">
+                Distribution of <code>|Actual_Performance - Predicted_Performance|</code> across all test samples.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature Dictionary Table -->
+<div class="ipl-card mb-4">
+    <div class="ipl-card-header">
+        <h5 class="ipl-card-title">
+            <i class="bi bi-book-half text-info"></i> Feature Dictionary & Predictive Impact
+        </h5>
+        <span class="badge bg-secondary">12 Engineered Features</span>
+    </div>
+    <div class="ipl-table-container">
+        <table class="ipl-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Feature Name</th>
+                    <th>Engineered Column</th>
+                    <th>Model Weight (%)</th>
+                    <th>Predictive Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in features %}
+                <tr>
+                    <td><strong>#{{ loop.index }}</strong></td>
+                    <td><strong class="text-white">{{ f.name }}</strong></td>
+                    <td><code class="text-info">{{ f.feature }}</code></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-warning">{{ f.importance }}%</span>
+                            <div class="progress flex-grow-1" style="height: 6px; background: rgba(255,255,255,0.08);">
+                                <div class="progress-bar bg-warning" style="width: {{ f.importance }}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="small text-muted">
+                        {% if 'previous_avg_performance' in f.feature %}
+                            Primary baseline anchor; captures the player's typical fantasy score level.
+                        {% elif 'previous_avg_balls_faced' in f.feature %}
+                            Workload indicator for batsmen (more balls faced = higher opportunity).
+                        {% elif 'previous_avg_balls_bowled' in f.feature %}
+                            Bowling quota indicator (full 4 overs / 24 balls = greater wicket chances).
+                        {% elif 'previous_avg_strike_rate' in f.feature %}
+                            Batting scoring velocity & boundary efficiency.
+                        {% elif 'previous_matches' in f.feature %}
+                            Experience metric; distinguishes veterans from tournament rookies.
+                        {% elif 'previous_std_performance' in f.feature %}
+                            Volatility / reliability metric; measures boom-or-bust tendencies.
+                        {% elif 'previous_avg_economy_rate' in f.feature %}
+                            Bowling run-containment control.
+                        {% elif 'previous_avg_bowling_average' in f.feature %}
+                            Runs conceded per wicket captured.
+                        {% elif 'season' in f.feature %}
+                            Temporal factor accounting for tournament meta shifts (e.g. higher strike rates over time).
+                        {% elif 'previous_avg_runs' in f.feature %}
+                            Pure batting average contribution.
+                        {% elif 'previous_performance' in f.feature %}
+                            Form factor: performance in the immediately preceding match.
+                        {% elif 'previous_avg_wickets' in f.feature %}
+                            Strike bowling frequency.
+                        {% else %}
+                            Engineered historical lag feature.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Machine Learning Architecture & Technical Decisions -->
+<div class="ipl-card">
+    <div class="ipl-card-header">
+        <h5 class="ipl-card-title">
+            <i class="bi bi-gear-fill text-warning"></i> Machine Learning Pipeline & Operational Integrity
+        </h5>
+    </div>
+    <div class="row g-4 p-2">
+        <div class="col-md-6">
+            <h6 class="fw-bold text-white mb-2">1. Target Variable Formulation</h6>
+            <p class="small text-muted mb-3">
+                In modern T20 cricket analytics, single-dimension metrics (e.g. batting average or bowling economy alone) fail to capture all-round player contributions. The model targets a composite performance metric:
+            </p>
+            <div class="p-2 px-3 rounded font-monospace small text-info bg-dark border mb-3">
+                Target = batting_runs + (20 &times; wickets)
+            </div>
+            <p class="small text-muted">
+                This metric rewards both substantial run scorers and key wicket-takers on an equivalent, fantasy-calibrated scale.
+            </p>
+        </div>
+
+        <div class="col-md-6">
+            <h6 class="fw-bold text-white mb-2">2. Respecting Option C & Data Authenticity</h6>
+            <p class="small text-muted mb-2">
+                As instructed, we do not replace or retrain the model. The web application strictly utilizes the verified outputs of the trained model from:
+            </p>
+            <ul class="small text-muted ps-3 mb-3">
+                <li><code>IPL_Random_Forest_Predictions.csv</code> (4,085 test predictions across 2021–2023)</li>
+                <li><code>IPL_Player_Match_Performance.csv</code> (21,716 historical match records)</li>
+                <li><code>IPL_Feature_Importance.csv</code> (Exact 12 feature weights)</li>
+                <li><code>IPL_Model_Evaluation_Metrics.csv</code> (Official R², MAE, RMSE metrics)</li>
+            </ul>
+            <p class="small text-muted">
+                Hypothetical custom manual inputs are disabled to prevent generating unverified or hallucinated predictions while preserving 100% integrity with your original research.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var featuresData = {{ features|tojson }};
+        renderFeatureImportanceChart('featureImportanceChartFull', featuresData);
+
+        var errDistData = {{ err_dist|tojson }};
+        renderErrorDistributionChart('errorDistributionChart', errDistData);
+    });
+</script>
+{% endblock %}

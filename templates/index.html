@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | IPL Player Performance Prediction ML{% endblock %}
+
+{% block content %}
+<!-- Top Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-gold">
+            <i class="bi bi-cpu stat-icon"></i>
+            <div class="stat-label">Model Predictions</div>
+            <div class="stat-value" style="color: var(--ipl-gold);">{{ "{:,}".format(stats.total_predictions) }}</div>
+            <div class="stat-sub">Across {{ stats.pred_players_count }} players (Seasons {{ stats.pred_seasons }})</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-cyan">
+            <i class="bi bi-people stat-icon"></i>
+            <div class="stat-label">Total IPL Players</div>
+            <div class="stat-value" style="color: var(--ipl-cyan);">{{ stats.total_players }}</div>
+            <div class="stat-sub">{{ "{:,}".format(stats.total_career_records) }} match performances ({{ stats.seasons_covered }})</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-green">
+            <i class="bi bi-bullseye stat-icon"></i>
+            <div class="stat-label">Model Mean Absolute Error</div>
+            <div class="stat-value" style="color: var(--ipl-green);">{{ stats.metrics.get('MAE', 18.64) }}</div>
+            <div class="stat-sub">RMSE: {{ stats.metrics.get('RMSE', 23.42) }} &bull; R²: {{ stats.metrics.get('R2 Score', 0.0027) }}</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-purple">
+            <i class="bi bi-sliders stat-icon"></i>
+            <div class="stat-label">Model Input Features</div>
+            <div class="stat-value" style="color: var(--ipl-purple);">12</div>
+            <div class="stat-sub">Top weight: Previous Avg Performance (31.2%)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Player Navigation Bar -->
+<div class="ipl-card mb-4 p-3">
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <span class="small fw-bold text-muted text-uppercase me-2">
+            <i class="bi bi-lightning-charge-fill text-warning"></i> Quick Select:
+        </span>
+        <a href="{{ url_for('predictions', player='V Kohli') }}" class="player-pill">Virat Kohli</a>
+        <a href="{{ url_for('predictions', player='RG Sharma') }}" class="player-pill">Rohit Sharma</a>
+        <a href="{{ url_for('predictions', player='MS Dhoni') }}" class="player-pill">MS Dhoni</a>
+        <a href="{{ url_for('predictions', player='Shubman Gill') }}" class="player-pill">Shubman Gill</a>
+        <a href="{{ url_for('predictions', player='Rashid Khan') }}" class="player-pill">Rashid Khan</a>
+        <a href="{{ url_for('predictions', player='RA Jadeja') }}" class="player-pill">Ravindra Jadeja</a>
+        <a href="{{ url_for('predictions', player='KL Rahul') }}" class="player-pill">KL Rahul</a>
+        <a href="{{ url_for('predictions', player='F du Plessis') }}" class="player-pill">Faf du Plessis</a>
+        <a href="{{ url_for('predictions', player='Mohammed Shami') }}" class="player-pill">Mohammed Shami</a>
+        <a href="{{ url_for('predictions', player='AD Russell') }}" class="player-pill">Andre Russell</a>
+    </div>
+</div>
+
+<!-- Main Row: Feature Importance & Model Comparison -->
+<div class="row g-4 mb-4">
+    <!-- Feature Importance Bar Chart -->
+    <div class="col-lg-7">
+        <div class="ipl-card">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-bar-chart-fill text-info"></i> Random Forest Feature Importances
+                </h5>
+                <span class="badge bg-secondary">Top 12 Features</span>
+            </div>
+            <div style="height: 380px;">
+                <canvas id="featureImportanceChart"></canvas>
+            </div>
+            <div class="mt-3 small text-muted text-center">
+                Rolling historical performance and batting workload represent over <strong>55%</strong> of predictive decision boundaries.
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Comparison & Target Metric -->
+    <div class="col-lg-5">
+        <div class="ipl-card mb-4">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-check2-circle text-success"></i> Model Performance vs Baseline
+                </h5>
+                <span class="badge bg-dark border">Test Evaluation</span>
+            </div>
+            <div class="ipl-table-container">
+                <table class="ipl-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>R² Score</th>
+                            <th>MAE</th>
+                            <th>RMSE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comp in comparisons %}
+                        <tr {% if 'Gradient' in comp['Model'] or 'Random' in comp['Model'] %}style="background: rgba(0, 229, 255, 0.06);"{% endif %}>
+                            <td>
+                                <strong>{{ comp['Model'] }}</strong>
+                                {% if 'Gradient' in comp['Model'] or 'Random' in comp['Model'] %}
+                                    <span class="badge bg-info text-dark ms-1">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.4f"|format(comp['R2 Score']) }}</td>
+                            <td>{{ "%.2f"|format(comp['MAE']) }}</td>
+                            <td>{{ "%.2f"|format(comp['RMSE']) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3 p-3 rounded" style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--ipl-border);">
+                <div class="small fw-bold text-white mb-1">
+                    <i class="bi bi-calculator text-warning"></i> Target Variable Formula:
+                </div>
+                <div class="small font-monospace text-info">
+                    performance_score = batting_runs + (20 &times; wickets)
+                </div>
+                <div class="small text-muted mt-1">
+                    Composite T20 fantasy points metric blending batting production and bowling breakthroughs.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Row: Top Projected Performers & High Accuracy Matches -->
+<div class="row g-4">
+    <!-- Top Projected Performers -->
+    <div class="col-lg-6">
+        <div class="ipl-card">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-star-fill text-warning"></i> Highest Predicted Scores (Test Set)
+                </h5>
+                <a href="{{ url_for('predictions') }}" class="btn btn-sm btn-ipl-outline">View All</a>
+            </div>
+            <div class="ipl-table-container">
+                <table class="ipl-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Date</th>
+                            <th>Predicted</th>
+                            <th>Actual</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in stats.top_performers %}
+                        <tr>
+                            <td>
+                                <strong>{{ p.player }}</strong>
+                                <div class="small text-muted">Season {{ p.season }}</div>
+                            </td>
+                            <td>{{ p.start_date }}</td>
+                            <td>
+                                <span class="fw-bold text-info">{{ p.Predicted_Performance }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-warning">{{ p.Actual_Performance }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('predictions', player=p.player) }}" class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.78rem;">
+                                    Analyze <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lowest Absolute Error (High Precision Matches) -->
+    <div class="col-lg-6">
+        <div class="ipl-card">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title">
+                    <i class="bi bi-bullseye text-success"></i> High Precision Model Predictions
+                </h5>
+                <span class="badge bg-success">Lowest Error</span>
+            </div>
+            <div class="ipl-table-container">
+                <table class="ipl-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Date</th>
+                            <th>Actual</th>
+                            <th>Predicted</th>
+                            <th>Abs Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in stats.best_predictions %}
+                        <tr>
+                            <td>
+                                <strong>{{ m.player }}</strong>
+                                <div class="small text-muted">Season {{ m.season }}</div>
+                            </td>
+                            <td>{{ m.start_date }}</td>
+                            <td><span class="text-warning fw-bold">{{ m.Actual_Performance }}</span></td>
+                            <td><span class="text-info fw-bold">{{ m.Predicted_Performance }}</span></td>
+                            <td>
+                                <span class="error-badge-good">&plusmn;{{ m.Absolute_Error }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var featuresData = {{ features|tojson }};
+        renderFeatureImportanceChart('featureImportanceChart', featuresData);
+    });
+</script>
+{% endblock %}

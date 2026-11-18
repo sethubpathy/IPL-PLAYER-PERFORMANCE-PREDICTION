@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Player Explorer | IPL Player Performance Prediction ML{% endblock %}
+
+{% block content %}
+<div class="row g-3 align-items-center mb-4">
+    <div class="col-lg-6">
+        <h3 class="fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-people text-info"></i>
+            <span>IPL Player Explorer</span>
+        </h3>
+        <p class="text-muted small mb-0">
+            Browse career metrics and performance records for all 695 players across 16 IPL seasons (2008–2023).
+        </p>
+    </div>
+
+    <!-- Filter Buttons & Search -->
+    <div class="col-lg-6">
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+            <a href="{{ url_for('players', filter='all') }}" class="btn btn-sm {% if filter_type == 'all' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                All ({{ total_count }})
+            </a>
+            <a href="{{ url_for('players', filter='predicted') }}" class="btn btn-sm {% if filter_type == 'predicted' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                With RF Predictions (261)
+            </a>
+            <a href="{{ url_for('players', filter='batsman') }}" class="btn btn-sm {% if filter_type == 'batsman' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                Batsmen (&ge;500 Runs)
+            </a>
+            <a href="{{ url_for('players', filter='bowler') }}" class="btn btn-sm {% if filter_type == 'bowler' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                Bowlers (&ge;20 Wkts)
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search Input Box -->
+<div class="ipl-card mb-4 p-3">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-0 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="tablePlayerSearch" class="form-control ipl-input" placeholder="Type player name to filter instantly (e.g. Kohli, Dhoni, Bumrah, Warner)..." value="{{ search_query }}">
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end text-muted small">
+            Showing <strong class="text-white">{{ total_count }}</strong> IPL players
+        </div>
+    </div>
+</div>
+
+<!-- Players Catalog Table -->
+<div class="ipl-card">
+    <div class="ipl-table-container">
+        <table class="ipl-table" id="playersCatalogTable">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Career Span</th>
+                    <th>Matches</th>
+                    <th>Runs</th>
+                    <th>Wickets</th>
+                    <th>Avg Performance Score</th>
+                    <th>Model Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in catalog %}
+                <tr data-player-name="{{ p.player }}">
+                    <td>
+                        <strong class="text-white fs-6">{{ p.player }}</strong>
+                    </td>
+                    <td>
+                        <span class="text-muted small">{{ p.span }}</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold">{{ p.matches }}</span>
+                    </td>
+                    <td>
+                        <span class="text-warning fw-bold">{{ p.runs }}</span>
+                    </td>
+                    <td>
+                        <span class="text-info fw-bold">{{ p.wickets }}</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-success">{{ p.avg_score }}</span>
+                    </td>
+                    <td>
+                        {% if p.has_predictions %}
+                            <span class="badge" style="background: rgba(0, 229, 255, 0.15); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
+                                <i class="bi bi-cpu"></i> RF Test Predictions
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary opacity-50">Career Data</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('player_detail', player_name=p.player) }}" class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.8rem;">
+                                Profile
+                            </a>
+                            {% if p.has_predictions %}
+                            <a href="{{ url_for('predictions', player=p.player) }}" class="btn btn-sm btn-ipl-gold py-0 px-2" style="font-size: 0.8rem;">
+                                Predictions <i class="bi bi-arrow-right"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

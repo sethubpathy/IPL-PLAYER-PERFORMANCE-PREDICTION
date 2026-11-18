@@ -1,0 +1,3 @@
+Model,R2 Score,MAE,RMSE
+Gradient Boosting,0.00274062,18.63698904,23.42119164
+Previous Average Baseline,-0.131477411,19.59286414,24.947548
