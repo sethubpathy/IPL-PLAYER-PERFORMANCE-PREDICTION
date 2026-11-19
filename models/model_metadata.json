@@ -1,0 +1,85 @@
+{
+  "model_type": "Multi-Output Random Forest Regressor",
+  "training_data": "2008\u20132023 Complete Historical Player-Match Records (21,716 records)",
+  "evaluation_split": "2008\u20132020 Train (17,152), 2021\u20132023 Held-Out Test (4,564)",
+  "evaluation_metrics": {
+    "batting_runs": {
+      "mae": 11.788,
+      "rmse": 17.551,
+      "r2": 0.2733,
+      "category": "Batting"
+    },
+    "fours": {
+      "mae": 1.197,
+      "rmse": 1.864,
+      "r2": 0.2345,
+      "category": "Batting"
+    },
+    "sixes": {
+      "mae": 0.707,
+      "rmse": 1.194,
+      "r2": 0.1177,
+      "category": "Batting"
+    },
+    "strike_rate": {
+      "mae": 49.944,
+      "rmse": 67.181,
+      "r2": 0.2739,
+      "category": "Batting"
+    },
+    "wickets": {
+      "mae": 0.456,
+      "rmse": 0.771,
+      "r2": 0.2807,
+      "category": "Bowling"
+    },
+    "economy_rate": {
+      "mae": 2.081,
+      "rmse": 3.245,
+      "r2": 0.5775,
+      "category": "Bowling"
+    },
+    "performance_score": {
+      "mae": 18.192,
+      "rmse": 23.224,
+      "r2": 0.0126,
+      "category": "Overall"
+    }
+  },
+  "forecast_horizons": {
+    "2024": "Immediate Horizon (t+1)",
+    "2025": "Medium-Term Projection (t+2)",
+    "2026": "Long-Range Trajectory (t+3)",
+    "2027": "Extended Horizon (t+4)"
+  },
+  "targets": {
+    "batting": [
+      "batting_runs",
+      "fours",
+      "sixes",
+      "strike_rate"
+    ],
+    "bowling": [
+      "wickets",
+      "economy_rate"
+    ],
+    "overall": [
+      "performance_score"
+    ]
+  },
+  "feature_importances": {
+    "previous_avg_runs": 0.1829,
+    "previous_avg_balls_faced": 0.3664,
+    "previous_avg_strike_rate": 0.079,
+    "previous_avg_wickets": 0.0098,
+    "previous_avg_balls_bowled": 0.0641,
+    "previous_avg_economy_rate": 0.0485,
+    "previous_avg_bowling_average": 0.0401,
+    "previous_avg_performance": 0.0367,
+    "previous_std_performance": 0.0534,
+    "previous_performance": 0.0353,
+    "previous_matches": 0.0504,
+    "season": 0.0337
+  },
+  "forecast_player_count": 292
+}

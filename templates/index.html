@@ -39,6 +39,77 @@
     </div>
 </div>
 
+<!-- Season Filter Toolbar (Complete 2008-2023 Tournament Coverage) -->
+<div class="ipl-card mb-4 p-3 filter-toolbar">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label small text-muted fw-bold mb-0 text-nowrap">
+                <i class="bi bi-funnel-fill text-info"></i> Tournament Season Filter:
+            </label>
+            <form method="GET" action="{{ url_for('index') }}" class="d-inline-flex align-items-center gap-2">
+                <select name="season" class="form-select ipl-select py-1 px-3" onchange="this.form.submit()" style="min-width: 250px;">
+                    <option value="All" {% if not stats.is_season_filtered %}selected{% endif %}>
+                        All Seasons (2008–2023 Full History)
+                    </option>
+                    <optgroup label="Held-Out Model Test Set (2021–2023)">
+                        {% for s in [2023, 2022, 2021] %}
+                        <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                            Season {{ s }} (Test Era &bull; RF Predictions Active)
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Historical Training Baseline Era (2008–2020)">
+                        {% for s in all_seasons|reverse %}
+                        {% if s < 2021 %}
+                        <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                            Season {{ s }} (Training Era &bull; Match Logs)
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                </select>
+                <noscript>
+                    <button type="submit" class="btn btn-sm btn-ipl-gold">Filter</button>
+                </noscript>
+            </form>
+        </div>
+
+        <!-- Quick Season Shortcuts -->
+        <div class="d-flex align-items-center gap-1 flex-wrap">
+            <span class="small text-muted me-2 d-none d-md-inline">Seasons:</span>
+            <a href="{{ url_for('index', season='All') }}" class="player-pill {% if not stats.is_season_filtered %}active{% endif %}">
+                All
+            </a>
+            {% for s in [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016] %}
+            <a href="{{ url_for('index', season=s) }}" class="player-pill {% if selected_season == s|string %}active{% endif %}">
+                {{ s }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if stats.is_season_filtered %}
+    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small">
+            {% if stats.era_info.is_test_era %}
+            <span class="badge bg-info text-dark me-2">
+                <i class="bi bi-cpu-fill"></i> Held-Out Test Era ({{ selected_season }})
+            </span>
+            <span>Displaying {{ stats.total_career_records }} match performances with Random Forest evaluations.</span>
+            {% else %}
+            <span class="badge bg-secondary me-2">
+                <i class="bi bi-clock-history"></i> Historical Training Era ({{ selected_season }})
+            </span>
+            <span>Showing {{ stats.total_career_records }} match records from model training period (2008–2020). Predictions strictly reserved for test seasons to prevent leakage.</span>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('index', season='All') }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;">
+            <i class="bi bi-x-circle"></i> Reset to Full Tournament History
+        </a>
+    </div>
+    {% endif %}
+</div>
+
 <!-- Quick Player Navigation Bar -->
 <div class="ipl-card mb-4 p-3">
     <div class="d-flex align-items-center flex-wrap gap-2">

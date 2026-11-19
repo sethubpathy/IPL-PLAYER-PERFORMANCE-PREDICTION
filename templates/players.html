@@ -17,37 +17,72 @@
     <!-- Filter Buttons & Search -->
     <div class="col-lg-6">
         <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-            <a href="{{ url_for('players', filter='all') }}" class="btn btn-sm {% if filter_type == 'all' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+            <a href="{{ url_for('players', filter='all', season=selected_season, q=search_query) }}" class="btn btn-sm {% if filter_type == 'all' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
                 All ({{ total_count }})
             </a>
-            <a href="{{ url_for('players', filter='predicted') }}" class="btn btn-sm {% if filter_type == 'predicted' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
-                With RF Predictions (261)
+            <a href="{{ url_for('players', filter='predicted', season=selected_season, q=search_query) }}" class="btn btn-sm {% if filter_type == 'predicted' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                With RF Predictions
             </a>
-            <a href="{{ url_for('players', filter='batsman') }}" class="btn btn-sm {% if filter_type == 'batsman' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
-                Batsmen (&ge;500 Runs)
+            <a href="{{ url_for('players', filter='batsman', season=selected_season, q=search_query) }}" class="btn btn-sm {% if filter_type == 'batsman' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                Batsmen
             </a>
-            <a href="{{ url_for('players', filter='bowler') }}" class="btn btn-sm {% if filter_type == 'bowler' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
-                Bowlers (&ge;20 Wkts)
+            <a href="{{ url_for('players', filter='bowler', season=selected_season, q=search_query) }}" class="btn btn-sm {% if filter_type == 'bowler' %}btn-ipl-gold{% else %}btn-ipl-outline{% endif %}">
+                Bowlers
             </a>
         </div>
     </div>
 </div>
 
-<!-- Search Input Box -->
+<!-- Search & Season Filter Toolbar -->
 <div class="ipl-card mb-4 p-3">
-    <div class="row g-2 align-items-center">
-        <div class="col-md-8">
+    <form method="GET" action="{{ url_for('players') }}" class="row g-3 align-items-center">
+        <input type="hidden" name="filter" value="{{ filter_type }}">
+        <div class="col-md-5">
             <div class="input-group">
                 <span class="input-group-text bg-dark border-0 text-muted">
                     <i class="bi bi-search"></i>
                 </span>
-                <input type="text" id="tablePlayerSearch" class="form-control ipl-input" placeholder="Type player name to filter instantly (e.g. Kohli, Dhoni, Bumrah, Warner)..." value="{{ search_query }}">
+                <input type="text" name="q" id="tablePlayerSearch" class="form-control ipl-input" placeholder="Type player name to filter (e.g. Kohli, Dhoni, Bumrah)..." value="{{ search_query }}">
             </div>
         </div>
-        <div class="col-md-4 text-md-end text-muted small">
-            Showing <strong class="text-white">{{ total_count }}</strong> IPL players
+        <div class="col-md-4">
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label small text-muted fw-bold mb-0 text-nowrap">
+                    <i class="bi bi-funnel-fill text-info"></i> Season:
+                </label>
+                <select name="season" class="form-select ipl-select py-1 px-3" onchange="this.form.submit()">
+                    <option value="All" {% if selected_season == 'All' %}selected{% endif %}>
+                        All Seasons (2008–2023 Career)
+                    </option>
+                    <optgroup label="Held-Out Model Test Set (2021–2023)">
+                        {% for s in [2023, 2022, 2021] %}
+                        <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                            Season {{ s }} (Test Era &bull; RF Predictions Active)
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Historical Training Baseline Era (2008–2020)">
+                        {% for s in all_seasons|reverse %}
+                        {% if s < 2021 %}
+                        <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                            Season {{ s }} (Training Era)
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                </select>
+                <noscript>
+                    <button type="submit" class="btn btn-sm btn-ipl-gold">Filter</button>
+                </noscript>
+            </div>
         </div>
-    </div>
+        <div class="col-md-3 text-md-end text-muted small">
+            Showing <strong class="text-white">{{ total_count }}</strong> players
+            {% if selected_season != 'All' %}
+            <span class="badge bg-dark border text-info ms-1">Season {{ selected_season }}</span>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
 <!-- Players Catalog Table -->

@@ -1,0 +1,598 @@
+{
+  "existing_routes": {
+    "all_passed": true,
+    "details": {
+      "Dashboard Overview": {
+        "route": "/",
+        "status": 200,
+        "passed": true
+      },
+      "Predictions Explorer": {
+        "route": "/predictions",
+        "status": 200,
+        "passed": true
+      },
+      "Player Catalog": {
+        "route": "/players",
+        "status": 200,
+        "passed": true
+      },
+      "Player Detail - Kohli": {
+        "route": "/player/V%20Kohli",
+        "status": 200,
+        "passed": true
+      },
+      "Compare Kohli vs Dhoni": {
+        "route": "/compare?p1=V%20Kohli&p2=MS%20Dhoni",
+        "status": 200,
+        "passed": true
+      },
+      "Model Analysis": {
+        "route": "/model-analysis",
+        "status": 200,
+        "passed": true
+      },
+      "API Player Predictions": {
+        "route": "/api/predictions/player/V%20Kohli",
+        "status": 200,
+        "passed": true
+      },
+      "API Feature Importance": {
+        "route": "/api/charts/feature-importance",
+        "status": 200,
+        "passed": true
+      },
+      "API Error Distribution": {
+        "route": "/api/charts/error-distribution",
+        "status": 200,
+        "passed": true
+      },
+      "API Player Search": {
+        "route": "/api/players/search?q=kohli",
+        "status": 200,
+        "passed": true
+      }
+    }
+  },
+  "api_predict_info": {
+    "status": 200,
+    "data": {
+      "endpoint": "/api/predict",
+      "features_required": [
+        "previous_avg_runs",
+        "previous_avg_balls_faced",
+        "previous_avg_strike_rate",
+        "previous_avg_wickets",
+        "previous_avg_balls_bowled",
+        "previous_avg_economy_rate",
+        "previous_avg_bowling_average",
+        "previous_avg_performance",
+        "previous_std_performance",
+        "previous_performance",
+        "previous_matches",
+        "season"
+      ],
+      "model": "Multi-Output Random Forest Regressor",
+      "status": "ready",
+      "target_metrics": [
+        "batting_runs",
+        "fours",
+        "sixes",
+        "strike_rate",
+        "wickets",
+        "economy_rate",
+        "performance_score"
+      ],
+      "usage": {
+        "by_player": "/api/predict?player=V+Kohli",
+        "custom_features": "/api/predict?previous_avg_runs=35&previous_avg_strike_rate=135&previous_matches=50"
+      }
+    }
+  },
+  "kohli_prediction": {
+    "status": 200,
+    "data": {
+      "inputs_used": {
+        "previous_avg_balls_bowled": 0.0,
+        "previous_avg_balls_faced": 26.0,
+        "previous_avg_bowling_average": 0.0,
+        "previous_avg_economy_rate": 0.0,
+        "previous_avg_performance": 35.2,
+        "previous_avg_runs": 35.2,
+        "previous_avg_strike_rate": 112.25,
+        "previous_avg_wickets": 0.0,
+        "previous_matches": 223.0,
+        "previous_performance": 0.0,
+        "previous_std_performance": 29.76,
+        "season": 2023.0
+      },
+      "is_known_player": true,
+      "model_evaluation_metrics": {
+        "batting_runs": {
+          "category": "Batting",
+          "mae": 11.788,
+          "r2": 0.2733,
+          "rmse": 17.551
+        },
+        "economy_rate": {
+          "category": "Bowling",
+          "mae": 2.081,
+          "r2": 0.5775,
+          "rmse": 3.245
+        },
+        "fours": {
+          "category": "Batting",
+          "mae": 1.197,
+          "r2": 0.2345,
+          "rmse": 1.864
+        },
+        "performance_score": {
+          "category": "Overall",
+          "mae": 18.192,
+          "r2": 0.0126,
+          "rmse": 23.224
+        },
+        "sixes": {
+          "category": "Batting",
+          "mae": 0.707,
+          "r2": 0.1177,
+          "rmse": 1.194
+        },
+        "strike_rate": {
+          "category": "Batting",
+          "mae": 49.944,
+          "r2": 0.2739,
+          "rmse": 67.181
+        },
+        "wickets": {
+          "category": "Bowling",
+          "mae": 0.456,
+          "r2": 0.2807,
+          "rmse": 0.771
+        }
+      },
+      "model_info": {
+        "architecture": "Multi-Output Random Forest Regressor",
+        "target_count": 7,
+        "trees": 150
+      },
+      "player": "V Kohli",
+      "prediction_mode": "live_multi_output_inference",
+      "predictions": {
+        "batting": {
+          "batting_runs": 24.54,
+          "fours": 2.28,
+          "sixes": 0.86,
+          "strike_rate": 108.73
+        },
+        "bowling": {
+          "economy_rate": 0.37,
+          "wickets": 0.01
+        },
+        "overall": {
+          "performance_score": 24.83
+        }
+      },
+      "status": "success",
+      "summary": {
+        "batting_runs": 24.54,
+        "economy_rate": 0.37,
+        "fours": 2.28,
+        "performance_score": 24.83,
+        "projected_role": "Batsman",
+        "sixes": 0.86,
+        "strike_rate": 108.73,
+        "wickets": 0.01
+      }
+    }
+  },
+  "bumrah_prediction": {
+    "status": 200,
+    "data": {
+      "inputs_used": {
+        "previous_avg_balls_bowled": 24.0,
+        "previous_avg_balls_faced": 0.6,
+        "previous_avg_bowling_average": 11.8,
+        "previous_avg_economy_rate": 7.15,
+        "previous_avg_performance": 8.0,
+        "previous_avg_runs": 0.0,
+        "previous_avg_strike_rate": 0.0,
+        "previous_avg_wickets": 0.4,
+        "previous_matches": 114.0,
+        "previous_performance": 20.0,
+        "previous_std_performance": 10.95,
+        "season": 2022.0
+      },
+      "is_known_player": true,
+      "model_evaluation_metrics": {
+        "batting_runs": {
+          "category": "Batting",
+          "mae": 11.788,
+          "r2": 0.2733,
+          "rmse": 17.551
+        },
+        "economy_rate": {
+          "category": "Bowling",
+          "mae": 2.081,
+          "r2": 0.5775,
+          "rmse": 3.245
+        },
+        "fours": {
+          "category": "Batting",
+          "mae": 1.197,
+          "r2": 0.2345,
+          "rmse": 1.864
+        },
+        "performance_score": {
+          "category": "Overall",
+          "mae": 18.192,
+          "r2": 0.0126,
+          "rmse": 23.224
+        },
+        "sixes": {
+          "category": "Batting",
+          "mae": 0.707,
+          "r2": 0.1177,
+          "rmse": 1.194
+        },
+        "strike_rate": {
+          "category": "Batting",
+          "mae": 49.944,
+          "r2": 0.2739,
+          "rmse": 67.181
+        },
+        "wickets": {
+          "category": "Bowling",
+          "mae": 0.456,
+          "r2": 0.2807,
+          "rmse": 0.771
+        }
+      },
+      "model_info": {
+        "architecture": "Multi-Output Random Forest Regressor",
+        "target_count": 7,
+        "trees": 150
+      },
+      "player": "JJ Bumrah",
+      "prediction_mode": "live_multi_output_inference",
+      "predictions": {
+        "batting": {
+          "batting_runs": 2.94,
+          "fours": 0.25,
+          "sixes": 0.07,
+          "strike_rate": 44.85
+        },
+        "bowling": {
+          "economy_rate": 8.2,
+          "wickets": 1.06
+        },
+        "overall": {
+          "performance_score": 24.08
+        }
+      },
+      "status": "success",
+      "summary": {
+        "batting_runs": 2.94,
+        "economy_rate": 8.2,
+        "fours": 0.25,
+        "performance_score": 24.08,
+        "projected_role": "Strike Bowler",
+        "sixes": 0.07,
+        "strike_rate": 44.85,
+        "wickets": 1.06
+      }
+    }
+  },
+  "jadeja_prediction": {
+    "status": 200,
+    "data": {
+      "inputs_used": {
+        "previous_avg_balls_bowled": 19.2,
+        "previous_avg_balls_faced": 8.4,
+        "previous_avg_bowling_average": 5.0,
+        "previous_avg_economy_rate": 6.97,
+        "previous_avg_performance": 14.0,
+        "previous_avg_runs": 10.0,
+        "previous_avg_strike_rate": 102.42,
+        "previous_avg_wickets": 0.2,
+        "previous_matches": 202.0,
+        "previous_performance": 3.0,
+        "previous_std_performance": 17.64,
+        "season": 2023.0
+      },
+      "is_known_player": true,
+      "model_evaluation_metrics": {
+        "batting_runs": {
+          "category": "Batting",
+          "mae": 11.788,
+          "r2": 0.2733,
+          "rmse": 17.551
+        },
+        "economy_rate": {
+          "category": "Bowling",
+          "mae": 2.081,
+          "r2": 0.5775,
+          "rmse": 3.245
+        },
+        "fours": {
+          "category": "Batting",
+          "mae": 1.197,
+          "r2": 0.2345,
+          "rmse": 1.864
+        },
+        "performance_score": {
+          "category": "Overall",
+          "mae": 18.192,
+          "r2": 0.0126,
+          "rmse": 23.224
+        },
+        "sixes": {
+          "category": "Batting",
+          "mae": 0.707,
+          "r2": 0.1177,
+          "rmse": 1.194
+        },
+        "strike_rate": {
+          "category": "Batting",
+          "mae": 49.944,
+          "r2": 0.2739,
+          "rmse": 67.181
+        },
+        "wickets": {
+          "category": "Bowling",
+          "mae": 0.456,
+          "r2": 0.2807,
+          "rmse": 0.771
+        }
+      },
+      "model_info": {
+        "architecture": "Multi-Output Random Forest Regressor",
+        "target_count": 7,
+        "trees": 150
+      },
+      "player": "RA Jadeja",
+      "prediction_mode": "live_multi_output_inference",
+      "predictions": {
+        "batting": {
+          "batting_runs": 9.73,
+          "fours": 0.71,
+          "sixes": 0.38,
+          "strike_rate": 82.6
+        },
+        "bowling": {
+          "economy_rate": 7.62,
+          "wickets": 0.71
+        },
+        "overall": {
+          "performance_score": 23.84
+        }
+      },
+      "status": "success",
+      "summary": {
+        "batting_runs": 9.73,
+        "economy_rate": 7.62,
+        "fours": 0.71,
+        "performance_score": 23.84,
+        "projected_role": "Bowling All-Rounder",
+        "sixes": 0.38,
+        "strike_rate": 82.6,
+        "wickets": 0.71
+      }
+    }
+  },
+  "custom_stats_prediction": {
+    "status": 200,
+    "data": {
+      "inputs_used": {
+        "previous_avg_balls_bowled": 18.0,
+        "previous_avg_balls_faced": 28.0,
+        "previous_avg_bowling_average": 22.5,
+        "previous_avg_economy_rate": 7.5,
+        "previous_avg_performance": 65.0,
+        "previous_avg_runs": 42.5,
+        "previous_avg_strike_rate": 151.78,
+        "previous_avg_wickets": 0.8,
+        "previous_matches": 60.0,
+        "previous_performance": 70.0,
+        "previous_std_performance": 25.0,
+        "season": 2024.0
+      },
+      "is_known_player": false,
+      "model_evaluation_metrics": {
+        "batting_runs": {
+          "category": "Batting",
+          "mae": 11.788,
+          "r2": 0.2733,
+          "rmse": 17.551
+        },
+        "economy_rate": {
+          "category": "Bowling",
+          "mae": 2.081,
+          "r2": 0.5775,
+          "rmse": 3.245
+        },
+        "fours": {
+          "category": "Batting",
+          "mae": 1.197,
+          "r2": 0.2345,
+          "rmse": 1.864
+        },
+        "performance_score": {
+          "category": "Overall",
+          "mae": 18.192,
+          "r2": 0.0126,
+          "rmse": 23.224
+        },
+        "sixes": {
+          "category": "Batting",
+          "mae": 0.707,
+          "r2": 0.1177,
+          "rmse": 1.194
+        },
+        "strike_rate": {
+          "category": "Batting",
+          "mae": 49.944,
+          "r2": 0.2739,
+          "rmse": 67.181
+        },
+        "wickets": {
+          "category": "Bowling",
+          "mae": 0.456,
+          "r2": 0.2807,
+          "rmse": 0.771
+        }
+      },
+      "model_info": {
+        "architecture": "Multi-Output Random Forest Regressor",
+        "target_count": 7,
+        "trees": 150
+      },
+      "player": "Custom / Hypothetical Profile",
+      "prediction_mode": "live_multi_output_inference",
+      "predictions": {
+        "batting": {
+          "batting_runs": 15.77,
+          "fours": 1.37,
+          "sixes": 0.7,
+          "strike_rate": 98.15
+        },
+        "bowling": {
+          "economy_rate": 6.95,
+          "wickets": 0.61
+        },
+        "overall": {
+          "performance_score": 28.04
+        }
+      },
+      "status": "success",
+      "summary": {
+        "batting_runs": 15.77,
+        "economy_rate": 6.95,
+        "fours": 1.37,
+        "performance_score": 28.04,
+        "projected_role": "Bowling All-Rounder",
+        "sixes": 0.7,
+        "strike_rate": 98.15,
+        "wickets": 0.61
+      }
+    }
+  },
+  "dhoni_predict": {
+    "status": 200,
+    "data": {
+      "inputs_used": {
+        "previous_avg_balls_bowled": 0.0,
+        "previous_avg_balls_faced": 16.4,
+        "previous_avg_bowling_average": 0.0,
+        "previous_avg_economy_rate": 0.0,
+        "previous_avg_performance": 18.4,
+        "previous_avg_runs": 18.4,
+        "previous_avg_strike_rate": 120.22,
+        "previous_avg_wickets": 0.0,
+        "previous_matches": 205.0,
+        "previous_performance": 26.0,
+        "previous_std_performance": 13.9,
+        "season": 2023.0
+      },
+      "is_known_player": true,
+      "model_evaluation_metrics": {
+        "batting_runs": {
+          "category": "Batting",
+          "mae": 11.788,
+          "r2": 0.2733,
+          "rmse": 17.551
+        },
+        "economy_rate": {
+          "category": "Bowling",
+          "mae": 2.081,
+          "r2": 0.5775,
+          "rmse": 3.245
+        },
+        "fours": {
+          "category": "Batting",
+          "mae": 1.197,
+          "r2": 0.2345,
+          "rmse": 1.864
+        },
+        "performance_score": {
+          "category": "Overall",
+          "mae": 18.192,
+          "r2": 0.0126,
+          "rmse": 23.224
+        },
+        "sixes": {
+          "category": "Batting",
+          "mae": 0.707,
+          "r2": 0.1177,
+          "rmse": 1.194
+        },
+        "strike_rate": {
+          "category": "Batting",
+          "mae": 49.944,
+          "r2": 0.2739,
+          "rmse": 67.181
+        },
+        "wickets": {
+          "category": "Bowling",
+          "mae": 0.456,
+          "r2": 0.2807,
+          "rmse": 0.771
+        }
+      },
+      "model_info": {
+        "architecture": "Multi-Output Random Forest Regressor",
+        "target_count": 7,
+        "trees": 150
+      },
+      "player": "MS Dhoni",
+      "prediction_mode": "live_multi_output_inference",
+      "predictions": {
+        "batting": {
+          "batting_runs": 21.56,
+          "fours": 1.97,
+          "sixes": 0.77,
+          "strike_rate": 101.95
+        },
+        "bowling": {
+          "economy_rate": 0.35,
+          "wickets": 0.02
+        },
+        "overall": {
+          "performance_score": 21.89
+        }
+      },
+      "status": "success",
+      "summary": {
+        "batting_runs": 21.56,
+        "economy_rate": 0.35,
+        "fours": 1.97,
+        "performance_score": 21.89,
+        "projected_role": "Batsman",
+        "sixes": 0.77,
+        "strike_rate": 101.95,
+        "wickets": 0.02
+      }
+    }
+  },
+  "validation_non_numeric": {
+    "status": 400,
+    "data": {
+      "errors": [
+        "Field 'previous_avg_runs' must be a valid number, got: invalid_string"
+      ],
+      "message": "Input validation failed.",
+      "status": "error"
+    }
+  },
+  "validation_out_of_range": {
+    "status": 400,
+    "data": {
+      "errors": [
+        "Field 'previous_avg_runs' value -25.0 is outside valid range [0.0, 150.0]",
+        "Field 'previous_avg_strike_rate' value 850.0 is outside valid range [0.0, 400.0]"
+      ],
+      "message": "Input validation failed.",
+      "status": "error"
+    }
+  }
+}

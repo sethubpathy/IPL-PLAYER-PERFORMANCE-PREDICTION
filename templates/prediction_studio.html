@@ -1,0 +1,884 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Prediction Studio | IPL Multi-Output ML{% endblock %}
+
+{% block content %}
+<!-- Studio Hero Header -->
+<div class="studio-hero mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge" style="background: rgba(255, 183, 3, 0.15); color: var(--ipl-gold); border: 1px solid rgba(255, 183, 3, 0.4);">
+                    <i class="bi bi-cpu-fill"></i> REAL ML INFERENCE
+                </span>
+                <span class="badge" style="background: rgba(0, 229, 255, 0.12); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.35);">
+                    <i class="bi bi-diagram-3-fill"></i> 7 SIMULTANEOUS TARGETS
+                </span>
+                <span class="badge" style="background: rgba(6, 214, 160, 0.14); color: var(--ipl-green); border: 1px solid rgba(6, 214, 160, 0.3);">
+                    <i class="bi bi-shield-check"></i> ZERO LEAKAGE
+                </span>
+            </div>
+            <h2 class="fw-bold text-white mb-2 d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill text-warning"></i>
+                <span>Live Prediction Studio</span>
+            </h2>
+            <p class="text-muted small mb-0">
+                Interactive Multi-Output Machine Learning simulator powered by a trained Random Forest Regressor (150 trees, max depth 12). 
+                Enter custom player statistics or load historical career baselines to generate real-time match forecasts across batting, bowling, and overall impact.
+            </p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <div class="p-3 rounded text-start d-inline-block" style="background: rgba(10, 18, 34, 0.7); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="text-uppercase small text-muted fw-bold" style="font-size: 0.68rem; letter-spacing: 0.8px;">Model Architecture</div>
+                <div class="fw-bold text-white fs-6">Multi-Output Random Forest</div>
+                <div class="small text-info mt-1">
+                    <i class="bi bi-database-check"></i> 21,716 IPL Training Records &bull; 695 Player Store
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Player Presets Toolbar -->
+<div class="ipl-card mb-4 p-3">
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <span class="small fw-bold text-muted text-uppercase me-2 d-flex align-items-center gap-1">
+            <i class="bi bi-stars text-warning"></i> Load Player Baseline:
+        </span>
+        {% for star in popular_players %}
+        <button type="button" class="quick-player-chip load-player-btn" data-player="{{ star }}">
+            <i class="bi bi-person-fill"></i> {{ star }}
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Main Prediction Workspace (Grid: Inputs 5 cols | Outputs 7 cols) -->
+<div class="row g-4">
+    <!-- LEFT COLUMN: Interactive Input Studio -->
+    <div class="col-xl-5 col-lg-6">
+        <div class="studio-input-section">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <h5 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-sliders text-info"></i> Performance Inputs
+                </h5>
+                <span class="badge-user-input"><i class="bi bi-pencil-square"></i> User Configurable</span>
+            </div>
+
+            <!-- Role Archetype Selector Buttons -->
+            <div class="mb-3">
+                <label class="studio-form-label mb-2">Quick Archetype Presets</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="studio-role-pill active" data-role="batsman">
+                        <i class="bi bi-battery-charging"></i> Top Batsman
+                    </div>
+                    <div class="studio-role-pill" data-role="bowler">
+                        <i class="bi bi-bullseye"></i> Strike Bowler
+                    </div>
+                    <div class="studio-role-pill" data-role="allrounder">
+                        <i class="bi bi-arrow-repeat"></i> All-Rounder
+                    </div>
+                    <div class="studio-role-pill" data-role="finisher">
+                        <i class="bi bi-fire"></i> Finisher
+                    </div>
+                </div>
+            </div>
+
+            <form id="predictionForm" onsubmit="event.preventDefault(); runPrediction();">
+                <!-- Player Name with Select & Datalist -->
+                <div class="mb-3">
+                    <label class="studio-form-label" for="input_player">
+                        <span>Player Name</span>
+                        <span class="range-hint">Select or type custom name</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="text" id="input_player" class="form-control studio-input" list="playerDatalist" 
+                               placeholder="e.g. Virat Kohli or Custom Player" value="{{ selected_player or 'V Kohli' }}" autocomplete="off">
+                        <button class="btn btn-ipl-outline px-3" type="button" id="btnFetchBaseline" title="Sync Baseline Stats">
+                            <i class="bi bi-cloud-arrow-down"></i> Load Stats
+                        </button>
+                    </div>
+                    <datalist id="playerDatalist">
+                        {% for p in all_players %}
+                        <option value="{{ p }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <!-- Primary Feature Grid -->
+                <div class="row g-2 mb-3">
+                    <!-- Previous Avg Runs -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_avg_runs">
+                            <span>Recent Avg Runs</span>
+                            <span class="range-hint">[0 - 150]</span>
+                        </label>
+                        <input type="number" step="0.1" min="0" max="150" id="f_avg_runs" class="form-control studio-input" value="35.2" required>
+                    </div>
+
+                    <!-- Batting Strike Rate -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_strike_rate">
+                            <span>Batting Strike Rate</span>
+                            <span class="range-hint">[0 - 400]</span>
+                        </label>
+                        <input type="number" step="0.1" min="0" max="400" id="f_strike_rate" class="form-control studio-input" value="112.25" required>
+                    </div>
+
+                    <!-- Previous Avg Wickets -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_avg_wickets">
+                            <span>Recent Avg Wickets</span>
+                            <span class="range-hint">[0 - 10]</span>
+                        </label>
+                        <input type="number" step="0.05" min="0" max="10" id="f_avg_wickets" class="form-control studio-input" value="0.0" required>
+                    </div>
+
+                    <!-- Bowling Economy Rate -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_economy">
+                            <span>Bowling Economy</span>
+                            <span class="range-hint">[0 - 36]</span>
+                        </label>
+                        <input type="number" step="0.1" min="0" max="36" id="f_economy" class="form-control studio-input" value="0.0" required>
+                    </div>
+
+                    <!-- Last Match Performance Score -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_prev_perf">
+                            <span>Last Match Fantasy Pts</span>
+                            <span class="range-hint">[0 - 300]</span>
+                        </label>
+                        <input type="number" step="0.5" min="0" max="300" id="f_prev_perf" class="form-control studio-input" value="0.0">
+                    </div>
+
+                    <!-- Total Previous Matches -->
+                    <div class="col-sm-6">
+                        <label class="studio-form-label" for="f_matches">
+                            <span>Career Matches</span>
+                            <span class="range-hint">[0 - 500]</span>
+                        </label>
+                        <input type="number" step="1" min="0" max="500" id="f_matches" class="form-control studio-input" value="223" required>
+                    </div>
+                </div>
+
+                <!-- Collapsible Advanced Context Features -->
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-link text-info text-decoration-none p-0 d-flex align-items-center gap-1" 
+                            type="button" data-bs-toggle="collapse" data-bs-target="#advancedFeaturesCollapse" aria-expanded="false">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>Advanced Feature Overrides (Balls, Bowling Avg, Season)</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+
+                    <div class="collapse mt-3" id="advancedFeaturesCollapse">
+                        <div class="p-3 rounded" style="background: rgba(10, 18, 34, 0.6); border: 1px dashed rgba(255, 255, 255, 0.1);">
+                            <div class="row g-2">
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_balls_faced">
+                                        <span>Avg Balls Faced</span>
+                                        <span class="range-hint">[0 - 120]</span>
+                                    </label>
+                                    <input type="number" step="0.5" min="0" max="120" id="f_balls_faced" class="form-control studio-input" value="26.0">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_balls_bowled">
+                                        <span>Avg Balls Bowled</span>
+                                        <span class="range-hint">[0 - 30]</span>
+                                    </label>
+                                    <input type="number" step="0.5" min="0" max="30" id="f_balls_bowled" class="form-control studio-input" value="0.0">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_bowling_avg">
+                                        <span>Bowling Average</span>
+                                        <span class="range-hint">[0 - 150]</span>
+                                    </label>
+                                    <input type="number" step="0.5" min="0" max="150" id="f_bowling_avg" class="form-control studio-input" value="0.0">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_avg_perf">
+                                        <span>Historical Performance Mean</span>
+                                        <span class="range-hint">[0 - 250]</span>
+                                    </label>
+                                    <input type="number" step="0.5" min="0" max="250" id="f_avg_perf" class="form-control studio-input" value="35.2">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_std_perf">
+                                        <span>Volatility (Std Dev)</span>
+                                        <span class="range-hint">[0 - 150]</span>
+                                    </label>
+                                    <input type="number" step="0.5" min="0" max="150" id="f_std_perf" class="form-control studio-input" value="29.76">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="studio-form-label" for="f_season">
+                                        <span>Target Season</span>
+                                        <span class="range-hint">[2008 - 2030]</span>
+                                    </label>
+                                    <input type="number" step="1" min="2008" max="2030" id="f_season" class="form-control studio-input" value="2024">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Error Message Area -->
+                <div id="validationAlert" class="alert alert-danger d-none py-2 px-3 small rounded mb-3" style="background: rgba(239, 71, 111, 0.15); border-color: rgba(239, 71, 111, 0.4); color: #ff859d;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong id="validationAlertMsg">Input Validation Error</strong>
+                    </div>
+                    <ul id="validationErrorsList" class="mb-0 ps-3"></ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <button type="submit" id="btnRunPrediction" class="btn btn-ipl-gold py-2 fw-bold d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-lightning-charge-fill fs-5"></i>
+                        <span>Generate Multi-Output Prediction</span>
+                        <div id="btnSpinner" class="spinner-border spinner-border-sm text-dark d-none" role="status"></div>
+                    </button>
+                    <button type="button" id="btnResetDefaults" class="btn btn-ipl-outline py-1 small">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset Input Values
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Live Multi-Output Forecast Display -->
+    <div class="col-xl-7 col-lg-6">
+        <!-- Ready / Placeholder State before prediction is executed -->
+        <div id="readyPlaceholder" class="ipl-card text-center p-5 d-none">
+            <div class="py-4">
+                <div class="mb-3">
+                    <i class="bi bi-cpu-fill" style="font-size: 3.5rem; color: var(--ipl-cyan); opacity: 0.85;"></i>
+                </div>
+                <h4 class="fw-bold text-white mb-2">Ready for Real-Time Inference</h4>
+                <p class="text-muted small mx-auto" style="max-width: 480px;">
+                    Select any player preset from the toolbar above or configure custom statistics, then click 
+                    <strong class="text-warning">Generate Multi-Output Prediction</strong> to invoke the trained 
+                    Random Forest model across all 7 metrics.
+                </p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <button type="button" class="btn btn-sm btn-ipl-gold" onclick="loadPlayerPreset('V Kohli')">
+                        <i class="bi bi-play-fill"></i> Simulate Virat Kohli
+                    </button>
+                    <button type="button" class="btn btn-sm btn-ipl-outline" onclick="loadPlayerPreset('JJ Bumrah')">
+                        <i class="bi bi-play-fill"></i> Simulate Jasprit Bumrah
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Prediction Result Container -->
+        <div id="predictionResultsContainer">
+            <!-- Top Projected Role & Match Fantasy Score Banner -->
+            <div class="projected-role-banner mb-3">
+                <div>
+                    <div class="text-uppercase small text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.8px;">
+                        Model Predicted Player Role
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span id="res_projected_role" class="projected-role-badge">
+                            <i class="bi bi-person-badge"></i> --
+                        </span>
+                        <span id="res_player_badge" class="badge bg-dark border text-light px-2 py-1">
+                            --
+                        </span>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="text-uppercase small text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.8px;">
+                        Predicted Performance Score
+                    </div>
+                    <div class="d-flex align-items-baseline justify-content-end gap-1">
+                        <span id="res_perf_score" class="fs-2 fw-bold text-warning font-monospace">--</span>
+                        <span class="small text-muted">pts</span>
+                    </div>
+                    <div class="small text-success fw-semibold" id="res_score_desc">
+                        <i class="bi bi-arrow-up-circle"></i> Projected Fantasy Contribution
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7-Metric Multi-Output Forecast Cards Grid -->
+            <div class="row g-3 mb-4">
+                <!-- BATTING METRICS (4 targets) -->
+                <div class="col-sm-6 col-md-3">
+                    <div class="target-metric-card card-accent-gold">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Batting Runs</span>
+                                <span class="badge-ml-output">Target 1</span>
+                            </div>
+                            <div class="target-card-value text-white" id="res_batting_runs">--</div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±11.79
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="target-metric-card card-accent-gold">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Projected Fours</span>
+                                <span class="badge-ml-output">Target 2</span>
+                            </div>
+                            <div class="target-card-value" style="color: var(--ipl-gold);" id="res_fours">--</div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±1.20
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="target-metric-card card-accent-gold">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Projected Sixes</span>
+                                <span class="badge-ml-output">Target 3</span>
+                            </div>
+                            <div class="target-card-value" style="color: var(--ipl-gold);" id="res_sixes">--</div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±0.71
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="target-metric-card card-accent-cyan">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Batting Strike Rate</span>
+                                <span class="badge-ml-output">Target 4</span>
+                            </div>
+                            <div class="target-card-value" style="color: var(--ipl-cyan);" id="res_strike_rate">--</div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±49.94
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOWLING METRICS (2 targets) -->
+                <div class="col-sm-6 col-md-6">
+                    <div class="target-metric-card card-accent-green">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Projected Wickets</span>
+                                <span class="badge-ml-output">Target 5</span>
+                            </div>
+                            <div class="d-flex align-items-baseline gap-2">
+                                <div class="target-card-value text-success" id="res_wickets">--</div>
+                                <span class="small text-muted" id="res_wicket_rating">--</span>
+                            </div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±0.46 &bull; R²: 0.2807
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-6">
+                    <div class="target-metric-card card-accent-purple">
+                        <div>
+                            <div class="target-card-label">
+                                <span>Bowling Economy Rate</span>
+                                <span class="badge-ml-output">Target 6</span>
+                            </div>
+                            <div class="d-flex align-items-baseline gap-2">
+                                <div class="target-card-value" style="color: #c084fc;" id="res_economy">--</div>
+                                <span class="small text-muted">Runs / Over</span>
+                            </div>
+                        </div>
+                        <div class="target-card-sub">
+                            <i class="bi bi-check2 text-success"></i> Test MAE: ±2.08 &bull; R²: 0.5775
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Radar Attribute Chart & Summary -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-7">
+                    <div class="ipl-card h-100">
+                        <div class="ipl-card-header">
+                            <h6 class="ipl-card-title mb-0">
+                                <i class="bi bi-radar text-info"></i> Projected Multi-Target Radar
+                            </h6>
+                            <span class="badge bg-dark border small">Normalized Impact</span>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="predictionRadarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="ipl-card h-100 d-flex flex-column justify-content-between">
+                        <div class="ipl-card-header">
+                            <h6 class="ipl-card-title mb-0">
+                                <i class="bi bi-check-circle-fill text-success"></i> Inference Verification
+                            </h6>
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50">Verified</span>
+                        </div>
+                        <div class="py-2">
+                            <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25 small">
+                                <span class="text-muted">Inference Source:</span>
+                                <strong class="text-info font-monospace">ipl_multi_output_rf.joblib</strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25 small">
+                                <span class="text-muted">Prediction Mode:</span>
+                                <strong class="text-white">Dynamic Live Execution</strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25 small">
+                                <span class="text-muted">Batting Boundary Ratio:</span>
+                                <strong class="text-warning" id="res_boundary_ratio">--</strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 small">
+                                <span class="text-muted">Model Estimators:</span>
+                                <strong class="text-light">150 Regressor Trees</strong>
+                            </div>
+                        </div>
+                        <div class="p-2 rounded mt-2" style="background: rgba(0, 229, 255, 0.05); border: 1px dashed rgba(0, 229, 255, 0.2);">
+                            <div class="small text-muted" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle text-info"></i> All 7 targets are computed via simultaneous tree leaves, capturing cross-metric correlations between scoring rate, boundary count, and wicket threat.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit: User Inputs vs Model Outputs Comparison Table -->
+            <div class="ipl-card">
+                <div class="ipl-card-header">
+                    <h6 class="ipl-card-title mb-0">
+                        <i class="bi bi-arrow-left-right text-warning"></i> Input vs. Prediction Audit Log
+                    </h6>
+                    <span class="badge bg-secondary">Full Audit Trail</span>
+                </div>
+                <div class="ipl-table-container">
+                    <table class="ipl-table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Metric / Feature</th>
+                                <th>Input or Target</th>
+                                <th>Value</th>
+                                <th>Source Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Global radar chart instance holder
+    var studioRadarChart = null;
+
+    // Archetype Presets dictionary
+    var ARCHETYPE_PRESETS = {
+        'batsman': {
+            'player': 'Top-Order Batsman',
+            'previous_avg_runs': 38.5,
+            'previous_avg_strike_rate': 136.0,
+            'previous_avg_wickets': 0.0,
+            'previous_avg_economy_rate': 0.0,
+            'previous_performance': 35.0,
+            'previous_matches': 120,
+            'previous_avg_balls_faced': 28.0,
+            'previous_avg_balls_bowled': 0.0,
+            'previous_avg_bowling_average': 0.0,
+            'previous_avg_performance': 38.5,
+            'previous_std_performance': 25.0
+        },
+        'bowler': {
+            'player': 'Strike Bowler',
+            'previous_avg_runs': 4.0,
+            'previous_avg_strike_rate': 65.0,
+            'previous_avg_wickets': 1.25,
+            'previous_avg_economy_rate': 7.4,
+            'previous_performance': 25.0,
+            'previous_matches': 95,
+            'previous_avg_balls_faced': 5.0,
+            'previous_avg_balls_bowled': 24.0,
+            'previous_avg_bowling_average': 18.5,
+            'previous_avg_performance': 28.0,
+            'previous_std_performance': 20.0
+        },
+        'allrounder': {
+            'player': 'Dynamic All-Rounder',
+            'previous_avg_runs': 22.0,
+            'previous_avg_strike_rate': 142.0,
+            'previous_avg_wickets': 0.85,
+            'previous_avg_economy_rate': 8.1,
+            'previous_performance': 45.0,
+            'previous_matches': 110,
+            'previous_avg_balls_faced': 16.0,
+            'previous_avg_balls_bowled': 18.0,
+            'previous_avg_bowling_average': 24.0,
+            'previous_avg_performance': 42.0,
+            'previous_std_performance': 28.0
+        },
+        'finisher': {
+            'player': 'Power Finisher',
+            'previous_avg_runs': 26.5,
+            'previous_avg_strike_rate': 175.0,
+            'previous_avg_wickets': 0.2,
+            'previous_avg_economy_rate': 9.5,
+            'previous_performance': 30.0,
+            'previous_matches': 80,
+            'previous_avg_balls_faced': 15.0,
+            'previous_avg_balls_bowled': 6.0,
+            'previous_avg_bowling_average': 32.0,
+            'previous_avg_performance': 32.0,
+            'previous_std_performance': 24.0
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Wire role pill clicks
+        document.querySelectorAll('.studio-role-pill').forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                document.querySelectorAll('.studio-role-pill').forEach(function (p) { p.classList.remove('active'); });
+                this.classList.add('active');
+                var roleKey = this.getAttribute('data-role');
+                if (ARCHETYPE_PRESETS[roleKey]) {
+                    applyPresetValues(ARCHETYPE_PRESETS[roleKey]);
+                    runPrediction();
+                }
+            });
+        });
+
+        // Wire quick player chips
+        document.querySelectorAll('.load-player-btn').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                var playerName = this.getAttribute('data-player');
+                loadPlayerPreset(playerName);
+            });
+        });
+
+        // Wire Load Stats button
+        var btnLoad = document.getElementById('btnFetchBaseline');
+        if (btnLoad) {
+            btnLoad.addEventListener('click', function () {
+                var name = document.getElementById('input_player').value.trim();
+                if (name) loadPlayerPreset(name);
+            });
+        }
+
+        // Wire reset defaults button
+        var btnReset = document.getElementById('btnResetDefaults');
+        if (btnReset) {
+            btnReset.addEventListener('click', function () {
+                loadPlayerPreset('V Kohli');
+            });
+        }
+
+        // Auto-run prediction on initial load for the selected player (default: Virat Kohli)
+        var initialPlayer = document.getElementById('input_player').value.trim() || 'V Kohli';
+        loadPlayerPreset(initialPlayer);
+    });
+
+    /**
+     * Applies preset dictionary to form fields
+     */
+    function applyPresetValues(data) {
+        if (data.player) document.getElementById('input_player').value = data.player;
+        if (data.previous_avg_runs !== undefined) document.getElementById('f_avg_runs').value = data.previous_avg_runs;
+        if (data.previous_avg_strike_rate !== undefined) document.getElementById('f_strike_rate').value = data.previous_avg_strike_rate;
+        if (data.previous_avg_wickets !== undefined) document.getElementById('f_avg_wickets').value = data.previous_avg_wickets;
+        if (data.previous_avg_economy_rate !== undefined) document.getElementById('f_economy').value = data.previous_avg_economy_rate;
+        if (data.previous_performance !== undefined) document.getElementById('f_prev_perf').value = data.previous_performance;
+        if (data.previous_matches !== undefined) document.getElementById('f_matches').value = data.previous_matches;
+
+        // Advanced features
+        if (data.previous_avg_balls_faced !== undefined) document.getElementById('f_balls_faced').value = data.previous_avg_balls_faced;
+        if (data.previous_avg_balls_bowled !== undefined) document.getElementById('f_balls_bowled').value = data.previous_avg_balls_bowled;
+        if (data.previous_avg_bowling_average !== undefined) document.getElementById('f_bowling_avg').value = data.previous_avg_bowling_average;
+        if (data.previous_avg_performance !== undefined) document.getElementById('f_avg_perf').value = data.previous_avg_performance;
+        if (data.previous_std_performance !== undefined) document.getElementById('f_std_perf').value = data.previous_std_performance;
+        if (data.season !== undefined) document.getElementById('f_season').value = data.season;
+    }
+
+    /**
+     * Fetch player baseline from backend API and update form & predictions
+     */
+    function loadPlayerPreset(playerName) {
+        document.getElementById('input_player').value = playerName;
+        hideValidationErrors();
+
+        // Fetch baseline stats from server
+        fetch('/api/player-baseline/' + encodeURIComponent(playerName))
+            .then(function (res) { return res.json(); })
+            .then(function (res) {
+                if (res.status === 'success' && res.baseline && res.baseline.features) {
+                    var f = res.baseline.features;
+                    f.player = playerName;
+                    applyPresetValues(f);
+                }
+                // Run prediction with loaded features
+                runPrediction();
+            })
+            .catch(function () {
+                // If baseline fetch fails, run prediction using current player name directly
+                runPrediction();
+            });
+    }
+
+    /**
+     * Executes genuine live ML prediction via POST /api/predict
+     */
+    function runPrediction() {
+        hideValidationErrors();
+
+        var btn = document.getElementById('btnRunPrediction');
+        var spinner = document.getElementById('btnSpinner');
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        var payload = {
+            'player': document.getElementById('input_player').value.trim(),
+            'previous_avg_runs': parseFloat(document.getElementById('f_avg_runs').value) || 0,
+            'previous_avg_strike_rate': parseFloat(document.getElementById('f_strike_rate').value) || 0,
+            'previous_avg_wickets': parseFloat(document.getElementById('f_avg_wickets').value) || 0,
+            'previous_avg_economy_rate': parseFloat(document.getElementById('f_economy').value) || 0,
+            'previous_performance': parseFloat(document.getElementById('f_prev_perf').value) || 0,
+            'previous_matches': parseInt(document.getElementById('f_matches').value, 10) || 0,
+            'previous_avg_balls_faced': parseFloat(document.getElementById('f_balls_faced').value) || 0,
+            'previous_avg_balls_bowled': parseFloat(document.getElementById('f_balls_bowled').value) || 0,
+            'previous_avg_bowling_average': parseFloat(document.getElementById('f_bowling_avg').value) || 0,
+            'previous_avg_performance': parseFloat(document.getElementById('f_avg_perf').value) || 0,
+            'previous_std_performance': parseFloat(document.getElementById('f_std_perf').value) || 0,
+            'season': parseInt(document.getElementById('f_season').value, 10) || 2024
+        };
+
+        fetch('/api/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, status: response.status, data: data };
+            });
+        })
+        .then(function (res) {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+
+            if (!res.ok || res.data.status === 'error') {
+                showValidationErrors(res.data.message || 'Validation error', res.data.errors || []);
+                return;
+            }
+
+            renderPredictionResults(res.data);
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            showValidationErrors('Communication error with ML inference server: ' + err.message, []);
+        });
+    }
+
+    /**
+     * Renders ML inference results on UI
+     */
+    function renderPredictionResults(data) {
+        document.getElementById('readyPlaceholder').classList.add('d-none');
+        document.getElementById('predictionResultsContainer').classList.remove('d-none');
+
+        var summary = data.summary;
+        var p = data.predictions;
+
+        // Banner
+        var roleBadge = document.getElementById('res_projected_role');
+        roleBadge.innerHTML = '<i class="bi bi-person-badge"></i> ' + summary.projected_role;
+        document.getElementById('res_player_badge').textContent = data.player || 'Custom Profile';
+        document.getElementById('res_perf_score').textContent = summary.performance_score.toFixed(2);
+
+        // Batting
+        document.getElementById('res_batting_runs').textContent = summary.batting_runs.toFixed(2);
+        document.getElementById('res_fours').textContent = summary.fours.toFixed(2);
+        document.getElementById('res_sixes').textContent = summary.sixes.toFixed(2);
+        document.getElementById('res_strike_rate').textContent = summary.strike_rate.toFixed(2);
+
+        // Bowling
+        document.getElementById('res_wickets').textContent = summary.wickets.toFixed(2);
+        document.getElementById('res_economy').textContent = summary.economy_rate.toFixed(2);
+
+        var wicketRating = document.getElementById('res_wicket_rating');
+        if (summary.wickets >= 1.0) {
+            wicketRating.textContent = 'High Wicket Threat';
+            wicketRating.className = 'small text-success fw-bold';
+        } else if (summary.wickets >= 0.5) {
+            wicketRating.textContent = 'Moderate Threat';
+            wicketRating.className = 'small text-info';
+        } else {
+            wicketRating.textContent = 'Part-Time Bowler';
+            wicketRating.className = 'small text-muted';
+        }
+
+        // Boundary ratio calculation
+        var boundaryRuns = (summary.fours * 4) + (summary.sixes * 6);
+        var boundaryPct = summary.batting_runs > 0 ? ((boundaryRuns / summary.batting_runs) * 100).toFixed(1) : 0;
+        document.getElementById('res_boundary_ratio').textContent = boundaryPct + '% (' + boundaryRuns.toFixed(1) + ' pts)';
+
+        // Render Radar Chart
+        renderPredictionRadar(summary);
+
+        // Render Audit Table
+        renderAuditTable(data.inputs_used, summary);
+    }
+
+    /**
+     * Renders Chart.js Radar visualization for the 7-metric profile
+     */
+    function renderPredictionRadar(summary) {
+        var canvas = document.getElementById('predictionRadarChart');
+        if (!canvas) return;
+
+        if (studioRadarChart) {
+            studioRadarChart.destroy();
+        }
+
+        // Normalize metrics on a 0-100 scale for radar visualization
+        var runsNorm = Math.min(100, (summary.batting_runs / 60) * 100);
+        var boundaryNorm = Math.min(100, (((summary.fours * 4) + (summary.sixes * 6)) / 40) * 100);
+        var srNorm = Math.min(100, (summary.strike_rate / 200) * 100);
+        var wicketsNorm = Math.min(100, (summary.wickets / 3.0) * 100);
+        var econNorm = Math.max(0, 100 - ((summary.economy_rate / 12) * 100)); // lower economy = better containment
+        var perfNorm = Math.min(100, (summary.performance_score / 60) * 100);
+
+        var ctx = canvas.getContext('2d');
+        studioRadarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Scoring Runs', 'Boundary Power', 'Strike Velocity', 'Wicket Threat', 'Run Containment', 'Overall Fantasy'],
+                datasets: [{
+                    label: 'Projected Model Profile',
+                    data: [runsNorm, boundaryNorm, srNorm, wicketsNorm, econNorm, perfNorm],
+                    backgroundColor: 'rgba(0, 229, 255, 0.22)',
+                    borderColor: '#00e5ff',
+                    pointBackgroundColor: '#ffb703',
+                    pointBorderColor: '#ffffff',
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: '#ffb703',
+                    pointRadius: 4,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                        pointLabels: {
+                            color: '#94a3b8',
+                            font: { size: 10, family: "'Inter', sans-serif", weight: '600' }
+                        },
+                        ticks: { display: false, max: 100, min: 0 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + Math.round(ctx.raw) + ' / 100';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Renders audit comparison table distinguishing inputs from outputs
+     */
+    function renderAuditTable(inputs, summary) {
+        var tbody = document.getElementById('auditTableBody');
+        if (!tbody) return;
+
+        var rows = [
+            { cat: 'Batting', name: 'Batting Runs', type: 'OUTPUT', val: summary.batting_runs + ' runs', source: 'Random Forest Model (Target 1)' },
+            { cat: 'Batting', name: 'Fours', type: 'OUTPUT', val: summary.fours + ' boundaries', source: 'Random Forest Model (Target 2)' },
+            { cat: 'Batting', name: 'Sixes', type: 'OUTPUT', val: summary.sixes + ' maximums', source: 'Random Forest Model (Target 3)' },
+            { cat: 'Batting', name: 'Batting Strike Rate', type: 'OUTPUT', val: summary.strike_rate + ' SR', source: 'Random Forest Model (Target 4)' },
+            { cat: 'Bowling', name: 'Wickets', type: 'OUTPUT', val: summary.wickets + ' wickets', source: 'Random Forest Model (Target 5)' },
+            { cat: 'Bowling', name: 'Economy Rate', type: 'OUTPUT', val: summary.economy_rate + ' RPO', source: 'Random Forest Model (Target 6)' },
+            { cat: 'Overall', name: 'Performance Score', type: 'OUTPUT', val: summary.performance_score + ' pts', source: 'Random Forest Model (Target 7)' },
+            { cat: 'Role', name: 'Derived Match Role', type: 'OUTPUT', val: summary.projected_role, source: 'Rule Classification Engine' },
+            { cat: 'Context', name: 'Recent Avg Runs Input', type: 'INPUT', val: inputs.previous_avg_runs, source: 'User-Supplied Statistic' },
+            { cat: 'Context', name: 'Recent Strike Rate Input', type: 'INPUT', val: inputs.previous_avg_strike_rate, source: 'User-Supplied Statistic' },
+            { cat: 'Context', name: 'Recent Avg Wickets Input', type: 'INPUT', val: inputs.previous_avg_wickets, source: 'User-Supplied Statistic' },
+            { cat: 'Context', name: 'Recent Economy Input', type: 'INPUT', val: inputs.previous_avg_economy_rate, source: 'User-Supplied Statistic' },
+            { cat: 'Context', name: 'Total Previous Matches', type: 'INPUT', val: inputs.previous_matches, source: 'User-Supplied Statistic' }
+        ];
+
+        var html = '';
+        rows.forEach(function (r) {
+            var badgeHtml = r.type === 'INPUT' 
+                ? '<span class="badge-user-input"><i class="bi bi-pencil"></i> USER INPUT</span>'
+                : '<span class="badge-ml-output"><i class="bi bi-cpu"></i> MODEL PREDICTION</span>';
+            
+            var textClass = r.type === 'OUTPUT' ? 'fw-bold text-white' : 'text-info';
+
+            html += '<tr>' +
+                '<td><span class="badge bg-dark border text-light">' + r.cat + '</span></td>' +
+                '<td><strong>' + r.name + '</strong></td>' +
+                '<td>' + badgeHtml + '</td>' +
+                '<td class="' + textClass + '">' + r.val + '</td>' +
+                '<td class="small text-muted">' + r.source + '</td>' +
+                '</tr>';
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    /**
+     * Show validation error alert
+     */
+    function showValidationErrors(message, errors) {
+        var alert = document.getElementById('validationAlert');
+        var msgEl = document.getElementById('validationAlertMsg');
+        var listEl = document.getElementById('validationErrorsList');
+        msgEl.textContent = message;
+        listEl.innerHTML = '';
+
+        if (errors && errors.length > 0) {
+            errors.forEach(function (err) {
+                var li = document.createElement('li');
+                li.textContent = err;
+                listEl.appendChild(li);
+            });
+        }
+        alert.classList.remove('d-none');
+    }
+
+    /**
+     * Hide validation error alert
+     */
+    function hideValidationErrors() {
+        var alert = document.getElementById('validationAlert');
+        if (alert) alert.classList.add('d-none');
+    }
+</script>
+{% endblock %}

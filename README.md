@@ -4,11 +4,11 @@ A machine learning web application analyzing IPL player performances across 16 s
 
 ---
 
-## 🏏 Project Overview & Operational Mode
+## 🏏 Project Overview & Architecture
 
-* **Model Used:** Precomputed test evaluation outputs from the trained **Random Forest Regressor**.
-* **Integrity & Policy (Option C):** No models were retrained, modified, or overwritten. The application reuses the authentic outputs and data artifacts (`IPL_Random_Forest_Predictions.csv`, `IPL_Player_Match_Performance.csv`, `IPL_Feature_Importance.csv`, `IPL_Model_Evaluation_Metrics.csv`, and `IPL_Model_Comparison.csv`).
-* **Transparency Notice:** Because the binary serialized model file (`.pkl` / `.joblib`) was not included in the repository, hypothetical real-time input inference is explicitly disabled to avoid generating unverified predictions. Only the genuine, verified model evaluation results on the 2021–2023 test set are displayed.
+* **Model Used:** Production-grade **Multi-Output Random Forest Regressor** predicting 7 simultaneous target metrics (`batting_runs`, `fours`, `sixes`, `strike_rate`, `wickets`, `economy_rate`, and `performance_score`).
+* **Live Prediction Studio:** Users can run dynamic simulations and hypothetical match scenarios with real-time model inference powered by `models/ipl_multi_output_rf.joblib`.
+* **Dataset Scope:** Full historical match logs covering 16 IPL seasons (2008–2023) across 695 players, trained chronologically (2008–2020 Train, 2021–2023 Held-Out Test) with zero data leakage.
 
 ---
 

@@ -33,10 +33,10 @@
     </div>
 </div>
 
-<!-- Selection Bar -->
+<!-- Selection Bar & Season Filter -->
 <div class="ipl-card mb-4 p-3">
     <form method="GET" action="{{ url_for('compare') }}" class="row g-3 align-items-center">
-        <div class="col-md-5">
+        <div class="col-md-4">
             <label class="form-label small text-muted fw-bold">Select Player 1:</label>
             <select name="p1" class="form-select ipl-select" onchange="this.form.submit()">
                 {% for p in all_players %}
@@ -44,10 +44,33 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2 text-center pt-md-4">
-            <span class="badge rounded-pill bg-dark border p-2 text-warning fs-6">VS</span>
+        <div class="col-md-4">
+            <label class="form-label small text-muted fw-bold">
+                <i class="bi bi-funnel-fill text-info"></i> Compare Season:
+            </label>
+            <select name="season" class="form-select ipl-select" onchange="this.form.submit()">
+                <option value="All" {% if selected_season == 'All' %}selected{% endif %}>
+                    All Seasons (2008–2023 Career)
+                </option>
+                <optgroup label="Held-Out Model Test Set (2021–2023)">
+                    {% for s in [2023, 2022, 2021] %}
+                    <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                        Season {{ s }} (Test Era &bull; RF Predictions Active)
+                    </option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Historical Training Baseline Era (2008–2020)">
+                    {% for s in all_seasons|reverse %}
+                    {% if s < 2021 %}
+                    <option value="{{ s }}" {% if selected_season == s|string %}selected{% endif %}>
+                        Season {{ s }} (Training Era)
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+            </select>
         </div>
-        <div class="col-md-5">
+        <div class="col-md-4">
             <label class="form-label small text-muted fw-bold">Select Player 2:</label>
             <select name="p2" class="form-select ipl-select" onchange="this.form.submit()">
                 {% for p in all_players %}
@@ -56,6 +79,27 @@
             </select>
         </div>
     </form>
+
+    {% if season_era %}
+    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small">
+            {% if season_era.is_test_era %}
+            <span class="badge bg-info text-dark me-2">
+                <i class="bi bi-cpu-fill"></i> {{ season_era.label }}
+            </span>
+            <span>Comparing head-to-head metrics in Season {{ season_era.season }} with Random Forest evaluations.</span>
+            {% else %}
+            <span class="badge bg-secondary me-2">
+                <i class="bi bi-clock-history"></i> {{ season_era.label }}
+            </span>
+            <span>Comparing actual match stats from the training dataset (2008–2020). Predictions are not fabricated for training seasons.</span>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('compare', p1=p1, p2=p2, season='All') }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;">
+            <i class="bi bi-x-circle"></i> Compare Full Career
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 {% if c1 and c2 %}

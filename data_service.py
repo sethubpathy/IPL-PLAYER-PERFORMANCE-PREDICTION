@@ -10,6 +10,8 @@ Handles loading, caching, and querying of all 6 project CSV files:
 """
 
 import os
+import json
+import ast
 import pandas as pd
 import numpy as np
 
@@ -25,6 +27,13 @@ class DataService:
         self.venue_lookup = {}
         self.players_with_predictions = []
         self.all_players = []
+        self.all_seasons = []
+        self.test_seasons = [2021, 2022, 2023]
+        self.train_seasons = []
+        self.forecast_df = None
+        self.forecast_json = None
+        self.forecast_seasons = [2024, 2025, 2026, 2027]
+        self.players_with_forecasts = []
         self.career_cache = {}
         self.loaded = False
 
@@ -64,6 +73,9 @@ class DataService:
         if os.path.exists(perf_path):
             self.performance_df = pd.read_csv(perf_path)
             self.all_players = sorted(self.performance_df['player'].dropna().unique().tolist())
+            self.all_seasons = sorted(self.performance_df['season'].dropna().unique().astype(int).tolist())
+            self.test_seasons = [s for s in self.all_seasons if s >= 2021]
+            self.train_seasons = [s for s in self.all_seasons if s < 2021]
 
         # 6. Venue lookup from cleaned ball data (match_id -> venue, teams)
         clean_path = os.path.join(BASE_DIR, 'IPL_Final_Project_Cleaned_Data.csv')
@@ -84,32 +96,104 @@ class DataService:
             except Exception as e:
                 print(f"Notice: Venue lookup load warning: {e}")
 
+        # 7. Future Season Multi-Output Forecasts (2024, 2025, 2026)
+        forecast_csv = os.path.join(BASE_DIR, 'IPL_Future_Season_Forecasts.csv')
+        forecast_json_path = os.path.join(BASE_DIR, 'models', 'future_season_forecasts.json')
+        if os.path.exists(forecast_json_path):
+            try:
+                with open(forecast_json_path, 'r', encoding='utf-8') as f:
+                    self.forecast_json = json.load(f)
+            except Exception as e:
+                print(f"Notice: Failed to load future forecasts json: {e}")
+
+        if os.path.exists(forecast_csv):
+            try:
+                self.forecast_df = pd.read_csv(forecast_csv)
+                self.players_with_forecasts = sorted(self.forecast_df['player'].dropna().unique().tolist())
+                self.forecast_seasons = sorted(self.forecast_df['season'].dropna().unique().astype(int).tolist())
+            except Exception as e:
+                print(f"Notice: Failed to load future forecasts csv: {e}")
+
         self.loaded = True
 
-    def get_dashboard_stats(self):
+    def get_dashboard_stats(self, season=None):
         self.load_data()
-        total_predictions = len(self.predictions_df) if self.predictions_df is not None else 0
-        total_career_matches = len(self.performance_df) if self.performance_df is not None else 0
-        total_players = len(self.all_players)
-        pred_players_count = len(self.players_with_predictions)
+        all_seasons = self.all_seasons or [y for y in range(2008, 2024)]
 
-        # Metrics
+        is_season_filtered = False
+        selected_season = 'All'
+        era_info = {
+            'is_filtered': False,
+            'is_test_era': False,
+            'label': 'Full Historical Dataset (2008–2023)'
+        }
+
+        if season and str(season).strip() != 'All':
+            try:
+                s_int = int(season)
+                if s_int in all_seasons:
+                    is_season_filtered = True
+                    selected_season = str(s_int)
+                    is_test = s_int in self.test_seasons
+                    era_info = {
+                        'is_filtered': True,
+                        'is_test_era': is_test,
+                        'season': s_int,
+                        'label': f"Held-Out Model Test Era (Season {s_int})" if is_test else f"Historical Training Baseline Era (Season {s_int})"
+                    }
+            except (ValueError, TypeError):
+                is_season_filtered = False
+
+        if not is_season_filtered:
+            total_predictions = len(self.predictions_df) if self.predictions_df is not None else 0
+            total_career_matches = len(self.performance_df) if self.performance_df is not None else 0
+            total_players = len(self.all_players)
+            pred_players_count = len(self.players_with_predictions)
+
+            best_preds = []
+            if self.predictions_df is not None:
+                top_acc = self.predictions_df.sort_values(by='Absolute_Error', ascending=True).head(5)
+                best_preds = top_acc[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'Absolute_Error']].to_dict(orient='records')
+
+            top_performers = []
+            if self.predictions_df is not None:
+                top_p = self.predictions_df.sort_values(by='Predicted_Performance', ascending=False).drop_duplicates(subset=['player']).head(6)
+                top_performers = top_p[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'previous_avg_performance']].to_dict(orient='records')
+        else:
+            s_int = int(selected_season)
+            df_s = self.performance_df[self.performance_df['season'] == s_int] if self.performance_df is not None else pd.DataFrame()
+            total_career_matches = len(df_s)
+            total_players = df_s['player'].nunique() if not df_s.empty else 0
+
+            if s_int in self.test_seasons and self.predictions_df is not None:
+                df_preds_s = self.predictions_df[self.predictions_df['season'] == s_int]
+                total_predictions = len(df_preds_s)
+                pred_players_count = df_preds_s['player'].nunique()
+                top_acc = df_preds_s.sort_values(by='Absolute_Error', ascending=True).head(5)
+                best_preds = top_acc[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'Absolute_Error']].to_dict(orient='records')
+                top_p = df_preds_s.sort_values(by='Predicted_Performance', ascending=False).drop_duplicates(subset=['player']).head(6)
+                top_performers = top_p[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'previous_avg_performance']].to_dict(orient='records')
+            else:
+                total_predictions = 0
+                pred_players_count = 0
+                best_preds = []
+                top_performers = []
+                if not df_s.empty:
+                    top_perf = df_s.sort_values(by='performance_score', ascending=False).drop_duplicates(subset=['player']).head(6)
+                    for _, r in top_perf.iterrows():
+                        top_performers.append({
+                            'player': r['player'],
+                            'season': int(r['season']),
+                            'start_date': str(r.get('start_date', '')),
+                            'Actual_Performance': round(float(r['performance_score']), 2),
+                            'Predicted_Performance': 'Training Era',
+                            'previous_avg_performance': round(float(r.get('previous_avg_performance', 0)), 2)
+                        })
+
         metrics = {}
         if self.metrics_df is not None:
             for _, r in self.metrics_df.iterrows():
                 metrics[r['Metric']] = float(r['Value'])
-
-        # Top 5 most accurate predictions
-        best_preds = []
-        if self.predictions_df is not None:
-            top_acc = self.predictions_df.sort_values(by='Absolute_Error', ascending=True).head(5)
-            best_preds = top_acc[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'Absolute_Error']].to_dict(orient='records')
-
-        # Top predicted high performers
-        top_performers = []
-        if self.predictions_df is not None:
-            top_p = self.predictions_df.sort_values(by='Predicted_Performance', ascending=False).drop_duplicates(subset=['player']).head(6)
-            top_performers = top_p[['player', 'season', 'start_date', 'Actual_Performance', 'Predicted_Performance', 'previous_avg_performance']].to_dict(orient='records')
 
         return {
             'total_predictions': total_predictions,
@@ -120,7 +204,11 @@ class DataService:
             'best_predictions': best_preds,
             'top_performers': top_performers,
             'seasons_covered': '2008 – 2023',
-            'pred_seasons': '2021 – 2023'
+            'pred_seasons': '2021 – 2023',
+            'all_seasons': all_seasons,
+            'selected_season': selected_season,
+            'is_season_filtered': is_season_filtered,
+            'era_info': era_info
         }
 
     def get_feature_importances(self):
@@ -173,6 +261,8 @@ class DataService:
 
         if season and str(season) != 'All':
             df = df[df['season'].astype(str) == str(season)]
+            if df.empty:
+                return None
 
         df = df.sort_values(by=['season', 'start_date'], ascending=True)
 
@@ -235,39 +325,57 @@ class DataService:
             'matches': records
         }
 
-    def get_player_career(self, player_name):
+    def get_player_career(self, player_name, season=None):
         self.load_data()
         if self.performance_df is None:
             return None
 
-        if player_name.lower() in self.career_cache:
-            return self.career_cache[player_name.lower()]
+        cache_key = (player_name.lower(), str(season) if season else 'All')
+        if cache_key in self.career_cache:
+            return self.career_cache[cache_key]
 
-        df = self.performance_df[self.performance_df['player'].str.lower() == player_name.lower()]
-        if df.empty:
+        df_all = self.performance_df[self.performance_df['player'].str.lower() == player_name.lower()]
+        if df_all.empty:
             return None
 
-        real_name = df.iloc[0]['player']
+        real_name = df_all.iloc[0]['player']
+        available_seasons = sorted(df_all['season'].dropna().unique().astype(int).tolist())
+
+        if season and str(season).strip() != 'All':
+            try:
+                s_int = int(season)
+                df = df_all[df_all['season'] == s_int]
+                is_season_filtered = True
+                selected_season_str = str(s_int)
+            except (ValueError, TypeError):
+                df = df_all
+                is_season_filtered = False
+                selected_season_str = 'All'
+        else:
+            df = df_all
+            is_season_filtered = False
+            selected_season_str = 'All'
+
         total_matches = len(df)
-        total_runs = int(df['batting_runs'].sum())
-        total_balls_faced = int(df['balls_faced'].sum())
-        total_fours = int(df['fours'].sum())
-        total_sixes = int(df['sixes'].sum())
+        total_runs = int(df['batting_runs'].sum()) if total_matches > 0 else 0
+        total_balls_faced = int(df['balls_faced'].sum()) if total_matches > 0 else 0
+        total_fours = int(df['fours'].sum()) if total_matches > 0 else 0
+        total_sixes = int(df['sixes'].sum()) if total_matches > 0 else 0
         batting_sr = round((total_runs / total_balls_faced * 100), 2) if total_balls_faced > 0 else 0
 
-        total_wickets = int(df['wickets'].sum())
-        total_runs_conceded = int(df['runs_conceded'].sum())
-        total_balls_bowled = int(df['balls_bowled'].sum())
+        total_wickets = int(df['wickets'].sum()) if total_matches > 0 else 0
+        total_runs_conceded = int(df['runs_conceded'].sum()) if total_matches > 0 else 0
+        total_balls_bowled = int(df['balls_bowled'].sum()) if total_matches > 0 else 0
         bowling_econ = round((total_runs_conceded / (total_balls_bowled / 6)), 2) if total_balls_bowled > 0 else 0
         bowling_avg = round((total_runs_conceded / total_wickets), 2) if total_wickets > 0 else 0
 
-        scores = df['performance_score'].dropna().tolist()
+        scores = df['performance_score'].dropna().tolist() if total_matches > 0 else []
         avg_score = round(float(np.mean(scores)), 2) if scores else 0
         max_score = round(float(np.max(scores)), 2) if scores else 0
 
-        # Season-wise breakdown
+        # Season-wise breakdown across entire career
         season_stats = []
-        for s, sdf in df.groupby('season'):
+        for s, sdf in df_all.groupby('season'):
             s_scores = sdf['performance_score'].dropna().tolist()
             season_stats.append({
                 'season': int(s),
@@ -278,7 +386,6 @@ class DataService:
             })
         season_stats = sorted(season_stats, key=lambda x: x['season'])
 
-        # Check if player has Random Forest predictions
         has_predictions = real_name in self.players_with_predictions
 
         res = {
@@ -296,11 +403,14 @@ class DataService:
             'avg_performance_score': avg_score,
             'max_performance_score': max_score,
             'seasons': season_stats,
+            'available_seasons': available_seasons,
+            'is_season_filtered': is_season_filtered,
+            'selected_season': selected_season_str,
             'has_predictions': has_predictions,
-            'first_season': int(df['season'].min()),
-            'last_season': int(df['season'].max())
+            'first_season': int(df_all['season'].min()),
+            'last_season': int(df_all['season'].max())
         }
-        self.career_cache[player_name.lower()] = res
+        self.career_cache[cache_key] = res
         return res
 
     def get_player_profile(self, player_name, season=None):
@@ -443,7 +553,7 @@ class DataService:
                 # All seasons: show overall test set performance (2021-2023)
                 rf_data = self.get_player_predictions(real_name, season=None)
                 rf_status = 'AVAILABLE'
-                rf_note = "Showing precomputed Random Forest predictions across all held-out test seasons (2021–2023)."
+                rf_note = "Showing Random Forest test-set evaluation predictions across held-out seasons (2021–2023)."
             else:
                 s_int = int(selected_season_str)
                 if s_int in [2021, 2022, 2023]:
@@ -524,11 +634,47 @@ class DataService:
                 'data': rf_data,
                 'status': rf_status,
                 'note': rf_note
-            }
+            },
+            # Future season forecast (2024–2026)
+            'future_forecast': self.get_player_future_forecast(real_name)
         }
 
-    def get_all_players_catalog(self, limit=None):
+    def get_all_players_catalog(self, limit=None, season=None):
         self.load_data()
+        if self.performance_df is None:
+            return []
+
+        if season and str(season).strip() != 'All':
+            try:
+                s_int = int(season)
+                df_s = self.performance_df[self.performance_df['season'] == s_int]
+                if df_s.empty:
+                    return []
+                grouped = df_s.groupby('player').agg(
+                    matches=('match_id', 'count'),
+                    runs=('batting_runs', 'sum'),
+                    wickets=('wickets', 'sum'),
+                    avg_score=('performance_score', 'mean')
+                ).reset_index()
+
+                catalog = []
+                for _, r in grouped.iterrows():
+                    catalog.append({
+                        'player': r['player'],
+                        'matches': int(r['matches']),
+                        'runs': int(r['runs']),
+                        'wickets': int(r['wickets']),
+                        'avg_score': round(float(r['avg_score']), 2) if pd.notnull(r['avg_score']) else 0.0,
+                        'has_predictions': r['player'] in self.players_with_predictions and s_int in self.test_seasons,
+                        'span': f"Season {s_int}"
+                    })
+                catalog = sorted(catalog, key=lambda x: (x['matches'], x['runs']), reverse=True)
+                if limit:
+                    return catalog[:limit]
+                return catalog
+            except (ValueError, TypeError):
+                pass
+
         catalog = []
         for p in self.all_players:
             c = self.get_player_career(p)
@@ -582,6 +728,226 @@ class DataService:
             'labels': labels,
             'counts': [int(c) for c in hist]
         }
+
+
+    def get_player_future_forecast(self, player_name, season='2024'):
+        """
+        Retrieve future season multi-output forecast for a player.
+        Supports seasons: 2024, 2025, 2026, or 'All'.
+        Returns 7 predicted outputs, confidence intervals, multi-year progression.
+        """
+        self.load_data()
+        if self.forecast_df is None or self.forecast_df.empty:
+            return None
+
+        p_name = player_name.strip().lower()
+        matched_df = self.forecast_df[self.forecast_df['player'].str.lower() == p_name]
+        if matched_df.empty:
+            matched_df = self.forecast_df[self.forecast_df['player'].str.lower().str.contains(p_name, regex=False)]
+            if matched_df.empty:
+                return None
+
+        canonical_player = matched_df.iloc[0]['player']
+        df_player = self.forecast_df[self.forecast_df['player'] == canonical_player].sort_values(by='season')
+
+        multi_year = []
+        for _, row in df_player.iterrows():
+            ci_runs = row['confidence_interval_runs']
+            ci_wkts = row['confidence_interval_wickets']
+            if isinstance(ci_runs, str):
+                try:
+                    ci_runs = ast.literal_eval(ci_runs)
+                except Exception:
+                    ci_runs = [0, 0]
+            if isinstance(ci_wkts, str):
+                try:
+                    ci_wkts = ast.literal_eval(ci_wkts)
+                except Exception:
+                    ci_wkts = [0, 0]
+
+            multi_year.append({
+                'player': row['player'],
+                'season': int(row['season']),
+                'horizon': row.get('horizon', ''),
+                'projected_match_runs': round(float(row['projected_match_runs']), 2),
+                'projected_season_runs': round(float(row['projected_season_runs']), 1),
+                'projected_fours': round(float(row['projected_fours']), 2),
+                'projected_season_fours': round(float(row['projected_season_fours']), 1),
+                'projected_sixes': round(float(row['projected_sixes']), 2),
+                'projected_season_sixes': round(float(row['projected_season_sixes']), 1),
+                'projected_strike_rate': round(float(row['projected_strike_rate']), 2),
+                'projected_match_wickets': round(float(row['projected_match_wickets']), 2),
+                'projected_season_wickets': round(float(row['projected_season_wickets']), 1),
+                'projected_economy_rate': round(float(row['projected_economy_rate']), 2),
+                'projected_performance_score': round(float(row['projected_performance_score']), 2),
+                'projected_role': row['projected_role'],
+                'confidence_interval_runs': ci_runs,
+                'confidence_interval_wickets': ci_wkts,
+                'uncertainty_factor': round(float(row.get('uncertainty_factor', 1.0)), 2),
+                'rank_runs': int(row.get('rank_runs', 0)),
+                'rank_wickets': int(row.get('rank_wickets', 0)),
+                'rank_mvp': int(row.get('rank_mvp', 0))
+            })
+
+        target_season = 2024
+        if season and str(season).strip() != 'All':
+            try:
+                target_season = int(season)
+            except (ValueError, TypeError):
+                target_season = 2024
+
+        primary_record = None
+        for rec in multi_year:
+            if rec['season'] == target_season:
+                primary_record = rec
+                break
+        if not primary_record and multi_year:
+            primary_record = multi_year[0]
+
+        chart_data = {
+            'seasons': [str(m['season']) for m in multi_year],
+            'runs': [m['projected_season_runs'] for m in multi_year],
+            'wickets': [m['projected_season_wickets'] for m in multi_year],
+            'mvp_score': [m['projected_performance_score'] for m in multi_year],
+            'strike_rate': [m['projected_strike_rate'] for m in multi_year],
+            'economy': [m['projected_economy_rate'] for m in multi_year]
+        }
+
+        return {
+            'player': canonical_player,
+            'selected_season': str(target_season) if (season and str(season).strip() != 'All') else 'All',
+            'primary': primary_record,
+            'multi_year': multi_year,
+            'chart_data': chart_data,
+            'available_seasons': [str(m['season']) for m in multi_year],
+            'total_forecast_players': len(self.players_with_forecasts)
+        }
+
+    def get_forecast_rankings(self, season=2024, top_n=5):
+        """
+        Get top forecasted batsmen, bowlers, and MVPs for a target future season.
+        """
+        self.load_data()
+        if self.forecast_df is None or self.forecast_df.empty:
+            return {'top_batsmen': [], 'top_bowlers': [], 'top_mvps': []}
+
+        try:
+            s_int = int(season)
+        except (ValueError, TypeError):
+            s_int = 2024
+
+        df_s = self.forecast_df[self.forecast_df['season'] == s_int]
+        if df_s.empty:
+            df_s = self.forecast_df[self.forecast_df['season'] == 2024]
+
+        top_batsmen = df_s.sort_values(by='projected_season_runs', ascending=False).head(top_n)
+        top_bowlers = df_s.sort_values(by='projected_season_wickets', ascending=False).head(top_n)
+        top_mvps = df_s.sort_values(by='projected_performance_score', ascending=False).head(top_n)
+
+        def _clean_rows(df_subset):
+            recs = []
+            for _, r in df_subset.iterrows():
+                ci_runs = r['confidence_interval_runs']
+                ci_wkts = r['confidence_interval_wickets']
+                if isinstance(ci_runs, str):
+                    try:
+                        ci_runs = ast.literal_eval(ci_runs)
+                    except Exception:
+                        ci_runs = [0, 0]
+                if isinstance(ci_wkts, str):
+                    try:
+                        ci_wkts = ast.literal_eval(ci_wkts)
+                    except Exception:
+                        ci_wkts = [0, 0]
+                recs.append({
+                    'player': r['player'],
+                    'season': int(r['season']),
+                    'projected_role': r['projected_role'],
+                    'projected_season_runs': round(float(r['projected_season_runs']), 1),
+                    'projected_match_runs': round(float(r['projected_match_runs']), 2),
+                    'projected_strike_rate': round(float(r['projected_strike_rate']), 2),
+                    'projected_season_wickets': round(float(r['projected_season_wickets']), 1),
+                    'projected_match_wickets': round(float(r['projected_match_wickets']), 2),
+                    'projected_economy_rate': round(float(r['projected_economy_rate']), 2),
+                    'projected_performance_score': round(float(r['projected_performance_score']), 2),
+                    'confidence_interval_runs': ci_runs,
+                    'confidence_interval_wickets': ci_wkts,
+                    'rank_runs': int(r.get('rank_runs', 0)),
+                    'rank_wickets': int(r.get('rank_wickets', 0)),
+                    'rank_mvp': int(r.get('rank_mvp', 0))
+                })
+            return recs
+
+        return {
+            'season': s_int,
+            'top_batsmen': _clean_rows(top_batsmen),
+            'top_bowlers': _clean_rows(top_bowlers),
+            'top_mvps': _clean_rows(top_mvps)
+        }
+
+    def get_all_forecasts_catalog(self, season='2024', search_query=None, role_filter=None, limit=None):
+        """
+        Get all player forecasts for a given season or across all future seasons.
+        """
+        self.load_data()
+        if self.forecast_df is None or self.forecast_df.empty:
+            return []
+
+        df = self.forecast_df.copy()
+        if season and str(season).strip() != 'All':
+            try:
+                s_int = int(season)
+                df = df[df['season'] == s_int]
+            except (ValueError, TypeError):
+                df = df[df['season'] == 2024]
+
+        if search_query:
+            df = df[df['player'].str.lower().str.contains(search_query.strip().lower(), regex=False)]
+
+        if role_filter and role_filter.lower() != 'all':
+            df = df[df['projected_role'].str.lower() == role_filter.strip().lower()]
+
+        df = df.sort_values(by=['rank_mvp', 'projected_performance_score'], ascending=[True, False])
+
+        if limit:
+            df = df.head(limit)
+
+        catalog = []
+        for _, r in df.iterrows():
+            ci_runs = r['confidence_interval_runs']
+            ci_wkts = r['confidence_interval_wickets']
+            if isinstance(ci_runs, str):
+                try:
+                    ci_runs = ast.literal_eval(ci_runs)
+                except Exception:
+                    ci_runs = [0, 0]
+            if isinstance(ci_wkts, str):
+                try:
+                    ci_wkts = ast.literal_eval(ci_wkts)
+                except Exception:
+                    ci_wkts = [0, 0]
+            catalog.append({
+                'player': r['player'],
+                'season': int(r['season']),
+                'horizon': r.get('horizon', ''),
+                'projected_role': r['projected_role'],
+                'projected_season_runs': round(float(r['projected_season_runs']), 1),
+                'projected_match_runs': round(float(r['projected_match_runs']), 2),
+                'projected_fours': round(float(r['projected_fours']), 2),
+                'projected_sixes': round(float(r['projected_sixes']), 2),
+                'projected_strike_rate': round(float(r['projected_strike_rate']), 2),
+                'projected_season_wickets': round(float(r['projected_season_wickets']), 1),
+                'projected_match_wickets': round(float(r['projected_match_wickets']), 2),
+                'projected_economy_rate': round(float(r['projected_economy_rate']), 2),
+                'projected_performance_score': round(float(r['projected_performance_score']), 2),
+                'confidence_interval_runs': ci_runs,
+                'confidence_interval_wickets': ci_wkts,
+                'uncertainty_factor': round(float(r.get('uncertainty_factor', 1.0)), 2),
+                'rank_runs': int(r.get('rank_runs', 0)),
+                'rank_wickets': int(r.get('rank_wickets', 0)),
+                'rank_mvp': int(r.get('rank_mvp', 0))
+            })
+        return catalog
 
 
 # Singleton instance

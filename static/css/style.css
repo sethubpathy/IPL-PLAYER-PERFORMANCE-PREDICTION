@@ -151,48 +151,6 @@ body {
 }
 
 /* -------------------------------------------------------------------
-   Premium Verification Banner (Option C)
-   ------------------------------------------------------------------- */
-.transparency-banner {
-  background: linear-gradient(135deg, rgba(13, 22, 39, 0.94) 0%, rgba(19, 31, 56, 0.9) 100%);
-  border: 1px solid var(--ipl-border-cyan);
-  border-left: 4px solid var(--ipl-gold);
-  border-radius: var(--ipl-radius-md);
-  padding: 1.15rem 1.4rem;
-  margin-bottom: 2rem;
-  color: var(--ipl-text-main);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 229, 255, 0.04);
-  position: relative;
-  overflow: hidden;
-  transition: var(--ipl-transition);
-}
-
-.transparency-banner::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 180px;
-  height: 100%;
-  background: radial-gradient(circle at right, rgba(0, 229, 255, 0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.verification-shield-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(255, 183, 3, 0.12);
-  border: 1px solid rgba(255, 183, 3, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--ipl-gold);
-  box-shadow: 0 0 16px rgba(255, 183, 3, 0.15);
-}
-
-/* -------------------------------------------------------------------
    Refined Blue Gradient Cards & Surfaces
    ------------------------------------------------------------------- */
 .ipl-card {
@@ -570,18 +528,6 @@ body {
 }
 
 @media (max-width: 767.98px) {
-  .transparency-banner {
-    padding: 1rem;
-  }
-  .transparency-banner .d-flex {
-    flex-direction: column;
-    gap: 8px !important;
-  }
-  .verification-shield-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 1.2rem;
-  }
   .prediction-score-val {
     font-size: 2.5rem;
   }
@@ -601,3 +547,268 @@ body {
     width: 100% !important;
   }
 }
+
+/* ===================================================================
+   Live Prediction Studio - Premium Cricket Analytics UI
+   =================================================================== */
+
+.studio-hero {
+  background: linear-gradient(135deg, rgba(13, 22, 39, 0.95) 0%, rgba(19, 31, 56, 0.92) 50%, rgba(10, 25, 47, 0.95) 100%);
+  border: 1px solid var(--ipl-border-cyan);
+  border-radius: var(--ipl-radius-lg);
+  padding: 1.75rem 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.studio-hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.studio-input-section {
+  background: linear-gradient(145deg, #0d1627 0%, #111d33 100%);
+  border: 1px solid var(--ipl-border-cyan);
+  border-radius: var(--ipl-radius-lg);
+  padding: 1.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: var(--ipl-transition);
+}
+
+.studio-form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ipl-text-muted);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.studio-form-label span.range-hint {
+  font-size: 0.7rem;
+  color: var(--ipl-text-subtle);
+  font-weight: 400;
+  text-transform: none;
+}
+
+.studio-input {
+  background: rgba(10, 18, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--ipl-radius-sm);
+  color: #ffffff;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: var(--ipl-transition);
+}
+
+.studio-input:focus {
+  background: rgba(13, 24, 45, 0.95);
+  border-color: var(--ipl-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
+  color: #ffffff;
+  outline: none;
+}
+
+.studio-input::placeholder {
+  color: var(--ipl-text-subtle);
+  font-size: 0.85rem;
+}
+
+.studio-role-pill {
+  cursor: pointer;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--ipl-text-muted);
+  transition: var(--ipl-transition);
+  user-select: none;
+}
+
+.studio-role-pill:hover {
+  border-color: var(--ipl-cyan);
+  color: var(--ipl-cyan);
+  background: rgba(0, 229, 255, 0.08);
+}
+
+.studio-role-pill.active {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 229, 255, 0.08));
+  border-color: var(--ipl-cyan);
+  color: var(--ipl-cyan);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+}
+
+.quick-player-chip {
+  cursor: pointer;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 183, 3, 0.25);
+  background: rgba(255, 183, 3, 0.06);
+  color: var(--ipl-gold);
+  transition: var(--ipl-transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quick-player-chip:hover {
+  background: rgba(255, 183, 3, 0.18);
+  border-color: var(--ipl-gold);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Output Cards Grid */
+.target-metric-card {
+  background: linear-gradient(135deg, rgba(13, 22, 39, 0.9) 0%, rgba(20, 32, 58, 0.85) 100%);
+  border: 1px solid var(--ipl-border);
+  border-radius: var(--ipl-radius-md);
+  padding: 1.25rem 1.1rem;
+  position: relative;
+  transition: var(--ipl-transition);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.target-metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.target-metric-card.card-accent-gold {
+  border-color: var(--ipl-border-gold);
+}
+.target-metric-card.card-accent-gold:hover {
+  box-shadow: 0 8px 24px var(--ipl-gold-glow);
+}
+
+.target-metric-card.card-accent-cyan {
+  border-color: var(--ipl-border-cyan);
+}
+.target-metric-card.card-accent-cyan:hover {
+  box-shadow: 0 8px 24px var(--ipl-cyan-glow);
+}
+
+.target-metric-card.card-accent-green {
+  border-color: rgba(6, 214, 160, 0.3);
+}
+.target-metric-card.card-accent-green:hover {
+  box-shadow: 0 8px 24px rgba(6, 214, 160, 0.2);
+}
+
+.target-metric-card.card-accent-purple {
+  border-color: rgba(168, 85, 247, 0.3);
+}
+.target-metric-card.card-accent-purple:hover {
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.2);
+}
+
+.target-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--ipl-text-muted);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.target-card-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+  font-feature-settings: "tnum";
+}
+
+.target-card-sub {
+  font-size: 0.75rem;
+  color: var(--ipl-text-subtle);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Master Projected Role Banner */
+.projected-role-banner {
+  background: linear-gradient(135deg, rgba(255, 183, 3, 0.12) 0%, rgba(0, 229, 255, 0.1) 100%);
+  border: 1px solid var(--ipl-border-gold);
+  border-radius: var(--ipl-radius-md);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.projected-role-badge {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.45rem 1.1rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--ipl-gold), #f77f00);
+  color: #060b14;
+  box-shadow: 0 0 16px var(--ipl-gold-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Distinction Badges */
+.badge-user-input {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--ipl-cyan);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+}
+
+.badge-ml-output {
+  background: rgba(255, 183, 3, 0.12);
+  color: var(--ipl-gold);
+  border: 1px solid rgba(255, 183, 3, 0.35);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+}
+
+/* Pulse animation for predicting state */
+@keyframes studio-pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.predicting-active {
+  animation: studio-pulse 1.2s infinite ease-in-out;
+}
+

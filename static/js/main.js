@@ -346,3 +346,122 @@ function renderSeasonProgressChart(canvasId, seasonsData) {
         }
     });
 }
+
+/**
+ * Render Future Season (2024, 2025, 2026) Multi-Output Trajectory Chart
+ */
+function renderFutureTrajectoryChart(canvasId, chartData) {
+    var ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    safeDestroyChart(canvasId);
+
+    var labels = chartData.seasons.map(function (s) {
+        if (s === '2024') return '2024 (Horizon t+1)';
+        if (s === '2025') return '2025 (Horizon t+2)';
+        if (s === '2026') return '2026 (Horizon t+3)';
+        if (s === '2027') return '2027 (Horizon t+4)';
+        return 'Season ' + s;
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Projected Season Runs',
+                    data: chartData.runs,
+                    backgroundColor: 'rgba(255, 183, 3, 0.75)',
+                    borderColor: '#ffb703',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: 'Projected Season Wickets',
+                    data: chartData.wickets,
+                    backgroundColor: 'rgba(0, 229, 255, 0.75)',
+                    borderColor: '#00e5ff',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    yAxisID: 'y1'
+                },
+                {
+                    type: 'line',
+                    label: 'Projected MVP Score (Pts/Match)',
+                    data: chartData.mvp_score,
+                    borderColor: '#06d6a0',
+                    backgroundColor: 'rgba(6, 214, 160, 0.1)',
+                    pointBackgroundColor: '#06d6a0',
+                    pointBorderColor: '#0a1222',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    borderWidth: 2.5,
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: 'y1'
+                },
+                {
+                    type: 'line',
+                    label: 'Projected Strike Rate',
+                    data: chartData.strike_rate,
+                    borderColor: '#a78bfa',
+                    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+                    pointBackgroundColor: '#a78bfa',
+                    pointBorderColor: '#0a1222',
+                    pointRadius: 5,
+                    borderDash: [4, 4],
+                    borderWidth: 2,
+                    tension: 0.2,
+                    fill: false,
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#f8fafc', font: { size: 12, weight: '600' } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 18, 34, 0.95)',
+                    titleColor: '#00e5ff',
+                    bodyColor: '#f8fafc',
+                    borderColor: 'rgba(0, 229, 255, 0.3)',
+                    borderWidth: 1,
+                    padding: 12
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { weight: '600' } }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Runs / Batting Strike Rate', color: '#ffb703' },
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#f8fafc' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'Wickets / MVP Points', color: '#00e5ff' },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#00e5ff' }
+                }
+            }
+        }
+    });
+}

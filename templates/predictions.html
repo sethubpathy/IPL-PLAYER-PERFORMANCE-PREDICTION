@@ -1,24 +1,33 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ selected_player }} - Random Forest Predictions | IPL ML{% endblock %}
+{% block title %}{{ selected_player }} - Future Season Forecasts (2024–2027) | IPL ML{% endblock %}
 
 {% block content %}
-<!-- Page Header & Player Selector -->
+<!-- Page Header & Forecast Controls -->
 <div class="row g-3 align-items-center mb-4">
     <div class="col-lg-6">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge" style="background: rgba(255, 183, 3, 0.15); color: var(--ipl-gold); border: 1px solid rgba(255, 183, 3, 0.3);">
+                <i class="bi bi-clock-history"></i> Future Forecasts (2024–2027)
+            </span>
+            <span class="badge" style="background: rgba(0, 229, 255, 0.15); color: var(--ipl-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
+                <i class="bi bi-cpu-fill"></i> Multi-Output Model
+            </span>
+        </div>
         <h3 class="fw-bold mb-1 d-flex align-items-center gap-2">
-            <i class="bi bi-cpu text-info"></i>
-            <span>Random Forest Model Predictions</span>
+            <i class="bi bi-graph-up-arrow text-warning"></i>
+            <span>Future Season Machine Learning Forecasting Hub</span>
         </h3>
         <p class="text-muted small mb-0">
-            Explore precomputed test set predictions across 2021–2023 matches for 261 IPL players.
+            Multi-Output Random Forest projections for IPL 2024, 2025, 2026, and 2027 trained on complete 2008–2023 historical records (21,716 matches).
         </p>
     </div>
 
-    <!-- Search / Select Form -->
+    <!-- Player & Season Select Form -->
     <div class="col-lg-6">
         <form method="GET" action="{{ url_for('predictions') }}" class="d-flex flex-wrap gap-2 justify-content-lg-end">
             <div style="min-width: 220px;">
+                <label class="form-label small text-muted mb-1">Select Player</label>
                 <select name="player" class="form-select ipl-select" onchange="this.form.submit()">
                     {% for p in players_list %}
                     <option value="{{ p }}" {% if p == selected_player %}selected{% endif %}>
@@ -27,17 +36,28 @@
                     {% endfor %}
                 </select>
             </div>
-            <div>
+            <div style="min-width: 170px;">
+                <label class="form-label small text-muted mb-1">Forecast Season</label>
                 <select name="season" class="form-select ipl-select" onchange="this.form.submit()">
-                    {% for s in available_seasons %}
-                    <option value="{{ s }}" {% if s == selected_season %}selected{% endif %}>
-                        Season: {{ s }}
+                    <option value="2024" {% if selected_season == '2024' %}selected{% endif %}>
+                        Season 2024 (Immediate)
                     </option>
-                    {% endfor %}
+                    <option value="2025" {% if selected_season == '2025' %}selected{% endif %}>
+                        Season 2025 (Medium)
+                    </option>
+                    <option value="2026" {% if selected_season == '2026' %}selected{% endif %}>
+                        Season 2026 (Long)
+                    </option>
+                    <option value="2027" {% if selected_season == '2027' %}selected{% endif %}>
+                        Season 2027 (Extended)
+                    </option>
+                    <option value="All" {% if selected_season == 'All' %}selected{% endif %}>
+                        All Future Seasons
+                    </option>
                 </select>
             </div>
             <noscript>
-                <button type="submit" class="btn btn-ipl-gold">Filter</button>
+                <button type="submit" class="btn btn-ipl-gold align-self-end">Filter</button>
             </noscript>
         </form>
     </div>
@@ -46,185 +66,402 @@
 <!-- Quick Player Shortcuts -->
 <div class="ipl-card mb-4 p-3">
     <div class="d-flex align-items-center flex-wrap gap-2">
-        <span class="small fw-bold text-muted text-uppercase me-2">Frequent Players:</span>
-        {% for star in ['V Kohli', 'RG Sharma', 'MS Dhoni', 'Shubman Gill', 'Rashid Khan', 'RA Jadeja', 'KL Rahul', 'F du Plessis', 'Mohammed Shami', 'YS Chahal', 'SP Narine'] %}
-        <a href="{{ url_for('predictions', player=star) }}" class="player-pill {% if star == selected_player %}active{% endif %}">
+        <span class="small fw-bold text-muted text-uppercase me-2">Frequent Stars:</span>
+        {% for star in ['V Kohli', 'RG Sharma', 'MS Dhoni', 'Shubman Gill', 'Rashid Khan', 'JJ Bumrah', 'F du Plessis', 'KL Rahul', 'RA Jadeja', 'Mohammed Shami', 'YS Chahal', 'AD Russell'] %}
+        <a href="{{ url_for('predictions', player=star, season=selected_season) }}" class="player-pill {% if star == selected_player %}active{% endif %}">
             {{ star }}
         </a>
         {% endfor %}
     </div>
 </div>
 
-{% if player_data %}
-<!-- Player Prediction Summary Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-widget stat-border-cyan">
-            <i class="bi bi-graph-up-arrow stat-icon"></i>
-            <div class="stat-label">Model Avg Prediction</div>
-            <div class="stat-value text-info">{{ player_data.summary.avg_predicted }}</div>
-            <div class="stat-sub">Max Predicted: {{ player_data.summary.max_predicted }} pts</div>
+<!-- Out-of-Sample Forecasting Scope & Integrity Notice -->
+<div class="ipl-card mb-4 p-3 py-2" style="background: rgba(14, 22, 38, 0.7); border: 1px dashed rgba(255, 183, 3, 0.3);">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge" style="background-color: var(--ipl-gold); color: #000;">
+                <i class="bi bi-info-circle-fill"></i> Forward ML Projections
+            </span>
+            <span class="text-muted">
+                <strong>No Future Actuals / No Data Leakage:</strong> Forecasts for 2024, 2025, 2026, and 2027 are generated strictly using historical records (2008–2023). Multi-year horizons incorporate recursive autoregressive form decay, accumulated matches, and widening uncertainty intervals (1.00&times; &rarr; 1.25&times; &rarr; 1.55&times; &rarr; 1.85&times;).
+            </span>
         </div>
+        <a href="{{ url_for('model_analysis') }}" class="btn btn-sm btn-ipl-outline text-nowrap py-1 px-2" style="font-size: 0.78rem;">
+            <i class="bi bi-bar-chart-steps"></i> View Historical 2021–2023 Validation Test Results &rarr;
+        </a>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-widget stat-border-gold">
-            <i class="bi bi-award stat-icon"></i>
-            <div class="stat-label">Actual Avg Performance</div>
-            <div class="stat-value text-warning">{{ player_data.summary.avg_actual }}</div>
-            <div class="stat-sub">Max Actual: {{ player_data.summary.max_actual }} pts</div>
+</div>
+
+{% if player_forecast and player_forecast.primary %}
+<!-- Selected Player Forecast Highlight Banner -->
+<div class="ipl-card mb-4 p-3" style="background: linear-gradient(135deg, rgba(14, 23, 42, 0.95), rgba(11, 19, 35, 0.9)); border: 1px solid var(--ipl-border-glow);">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="fw-bold mb-0 text-white">{{ player_forecast.player }}</h4>
+                <span class="badge" style="background: rgba(0, 229, 255, 0.2); color: var(--ipl-cyan); border: 1px solid var(--ipl-cyan);">
+                    {{ player_forecast.primary.projected_role }}
+                </span>
+                <span class="badge bg-dark border text-light">
+                    Season {{ player_forecast.primary.season }}
+                </span>
+            </div>
+            <div class="small text-muted">
+                <i class="bi bi-compass"></i> Horizon: <strong class="text-info">{{ player_forecast.primary.horizon }}</strong> &bull;
+                Uncertainty Multiplier: <strong class="text-warning">&plusmn;{{ player_forecast.primary.uncertainty_factor }}&times; SE</strong> &bull;
+                Tournament MVP Rank: <strong class="text-warning">#{{ player_forecast.primary.rank_mvp }}</strong> of {{ player_forecast.total_forecast_players }} players
+            </div>
         </div>
-    </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-widget stat-border-green">
-            <i class="bi bi-bullseye stat-icon"></i>
-            <div class="stat-label">Player Specific MAE</div>
-            <div class="stat-value text-success">&plusmn;{{ player_data.summary.mae }}</div>
-            <div class="stat-sub">RMSE: {{ player_data.summary.rmse }}</div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-widget stat-border-purple">
-            <i class="bi bi-calendar-event stat-icon"></i>
-            <div class="stat-label">Matches Predicted</div>
-            <div class="stat-value" style="color: var(--ipl-purple);">{{ player_data.summary.total_predicted_matches }}</div>
-            <div class="stat-sub">Seasons: {{ player_data.summary.seasons|join(', ') }}</div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('player_detail', player_name=player_forecast.player) }}" class="btn btn-sm btn-ipl-outline">
+                <i class="bi bi-person-badge"></i> Career History (2008–2023)
+            </a>
+            <a href="{{ url_for('predict', player=player_forecast.player) }}" class="btn btn-sm btn-ipl-gold">
+                <i class="bi bi-lightning-charge-fill"></i> Simulate in Live Studio
+            </a>
         </div>
     </div>
 </div>
 
-<!-- Interactive Chart: Actual vs Predicted Performance Timeline -->
+<!-- Seven Multi-Output Forecast Cards -->
+<div class="row g-3 mb-4">
+    <!-- 1. Batting Runs Forecast -->
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-gold">
+            <i class="bi bi-lightning-fill stat-icon"></i>
+            <div class="stat-label">Projected Batting Runs</div>
+            <div class="stat-value text-warning">{{ player_forecast.primary.projected_season_runs }}</div>
+            <div class="stat-sub">
+                Expected ~{{ player_forecast.primary.projected_match_runs }} runs/match
+                <div class="mt-1 small" style="color: rgba(255, 183, 3, 0.8);">
+                    90% CI: [{{ player_forecast.primary.confidence_interval_runs[0] }}, {{ player_forecast.primary.confidence_interval_runs[1] }}] &bull; Rank #{{ player_forecast.primary.rank_runs }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Boundary Output Forecast (Fours & Sixes) -->
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-cyan">
+            <i class="bi bi-bullseye stat-icon"></i>
+            <div class="stat-label">Projected Boundaries</div>
+            <div class="stat-value text-info">{{ player_forecast.primary.projected_season_fours|int }} <span class="fs-6 text-muted">4s</span> &bull; {{ player_forecast.primary.projected_season_sixes|int }} <span class="fs-6 text-muted">6s</span></div>
+            <div class="stat-sub">
+                Per Match: {{ player_forecast.primary.projected_fours }} fours &bull; {{ player_forecast.primary.projected_sixes }} sixes
+                <div class="mt-1 small text-muted">
+                    Boundary scoring power projection
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Batting Strike Rate Forecast -->
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-purple">
+            <i class="bi bi-speedometer2 stat-icon"></i>
+            <div class="stat-label">Projected Strike Rate</div>
+            <div class="stat-value" style="color: var(--ipl-purple);">{{ player_forecast.primary.projected_strike_rate }}</div>
+            <div class="stat-sub">
+                Scoring velocity index
+                <div class="mt-1 small text-muted">
+                    Runs per 100 balls expected
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Bowling Wickets Forecast -->
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-widget stat-border-green">
+            <i class="bi bi-trophy-fill stat-icon"></i>
+            <div class="stat-label">Projected Wickets</div>
+            <div class="stat-value text-success">{{ player_forecast.primary.projected_season_wickets }}</div>
+            <div class="stat-sub">
+                Expected ~{{ player_forecast.primary.projected_match_wickets }} wkts/match
+                <div class="mt-1 small" style="color: rgba(6, 214, 160, 0.8);">
+                    90% CI: [{{ player_forecast.primary.confidence_interval_wickets[0] }}, {{ player_forecast.primary.confidence_interval_wickets[1] }}] &bull; Rank #{{ player_forecast.primary.rank_wickets }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Outputs: Economy, MVP Score, Horizon Trajectory -->
+<div class="row g-3 mb-4">
+    <!-- 5. Bowling Economy -->
+    <div class="col-xl-4 col-md-6">
+        <div class="stat-widget stat-border-cyan">
+            <i class="bi bi-shield-shaded stat-icon"></i>
+            <div class="stat-label">Projected Bowling Economy</div>
+            <div class="stat-value text-info">{{ player_forecast.primary.projected_economy_rate }}</div>
+            <div class="stat-sub">
+                Runs conceded per 6 balls bowled
+                <div class="mt-1 small text-muted">Run-containment efficiency</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Composite Performance Score (MVP) -->
+    <div class="col-xl-4 col-md-6">
+        <div class="stat-widget stat-border-gold">
+            <i class="bi bi-award-fill stat-icon"></i>
+            <div class="stat-label">Projected MVP Score (Pts/Match)</div>
+            <div class="stat-value text-warning">{{ player_forecast.primary.projected_performance_score }}</div>
+            <div class="stat-sub">
+                Target: Runs + (20 &times; Wickets)
+                <div class="mt-1 small text-warning">Overall Tournament MVP Rank #{{ player_forecast.primary.rank_mvp }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Career Model Horizon & Confidence Factor -->
+    <div class="col-xl-4 col-md-12">
+        <div class="stat-widget stat-border-purple">
+            <i class="bi bi-diagram-3-fill stat-icon"></i>
+            <div class="stat-label">Model Horizon & Uncertainty</div>
+            <div class="stat-value" style="color: var(--ipl-purple);">
+                {{ player_forecast.primary.season }} <span class="fs-6 text-muted">(&plusmn;{{ player_forecast.primary.uncertainty_factor }}&times;)</span>
+            </div>
+            <div class="stat-sub">
+                {{ player_forecast.primary.horizon }}
+                <div class="mt-1 small text-muted">Autoregressive aging & decay adjustment active</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Multi-Year Forecast Progression Chart -->
 <div class="ipl-card mb-4">
     <div class="ipl-card-header">
         <h5 class="ipl-card-title">
-            <i class="bi bi-activity text-info"></i> Performance Timeline: Actual vs Random Forest Prediction
+            <i class="bi bi-graph-up text-warning"></i> Multi-Year Forecast Trajectory (2024 vs 2025 vs 2026 vs 2027)
         </h5>
         <div class="d-flex align-items-center gap-3">
-            <span class="small"><span class="badge" style="background-color: var(--ipl-gold); color: #000;">&bull; Actual</span></span>
-            <span class="small"><span class="badge" style="background-color: var(--ipl-cyan); color: #000;">- - Predicted</span></span>
+            <span class="small"><span class="badge" style="background-color: var(--ipl-gold); color: #000;">Season Runs</span></span>
+            <span class="small"><span class="badge" style="background-color: var(--ipl-cyan); color: #000;">Season Wickets</span></span>
+            <span class="small"><span class="badge" style="background-color: #06d6a0; color: #000;">MVP Points</span></span>
+            <span class="small"><span class="badge" style="background-color: #a78bfa; color: #000;">Strike Rate</span></span>
         </div>
     </div>
     <div style="height: 380px;">
-        <canvas id="predictionsTimelineChart"></canvas>
+        <canvas id="futureTrajectoryChart"></canvas>
+    </div>
+    <div class="p-3 pt-2 text-center small text-muted border-top border-dark">
+        <i class="bi bi-info-circle"></i> Forecasts evolve over the 4-year horizon through recursive autoregressive form updates, cumulative match experience, and widening confidence bounds.
     </div>
 </div>
 
-<!-- Match-by-Match Prediction Details Table -->
+<!-- Forecast Methodology Deep Dive Box -->
+<div class="ipl-card mb-4 p-3" style="background: rgba(14, 22, 38, 0.6); border: 1px dashed rgba(0, 229, 255, 0.25);">
+    <h6 class="fw-bold text-info mb-2">
+        <i class="bi bi-cpu-fill"></i> Multi-Horizon Recursive Forecasting Methodology
+    </h6>
+    <div class="row g-3 small text-muted">
+        <div class="col-lg-3 col-md-6">
+            <strong class="text-white">2024 (Horizon t+1):</strong>
+            <div>Uses latest 2023 career form vectors with temporal feature <code>season=2024</code>. Baseline error multiplier: 1.00&times;.</div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <strong class="text-white">2025 (Horizon t+2):</strong>
+            <div>Autoregressive smoothing (0.70 &times; prior + 0.30 &times; 2024 projection), +14 matches experience, career aging curve, 1.25&times; error bound.</div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <strong class="text-white">2026 (Horizon t+3):</strong>
+            <div>Recursive update integrating 2025 projection, +28 cumulative matches, career trajectory adjustments, 1.55&times; error bound.</div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <strong class="text-white">2027 (Horizon t+4):</strong>
+            <div>Extended recursive update integrating 2026 projection, +42 matches, cumulative late-career adjustments, 1.85&times; error bound.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Season Forecast Leaderboards (Rankings) -->
+<div class="row g-4 mb-4">
+    <!-- Column 1: Orange Cap Projections (Top Batsmen) -->
+    <div class="col-lg-4">
+        <div class="ipl-card h-100">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title text-warning">
+                    <i class="bi bi-trophy-fill"></i> Orange Cap Projections ({{ rankings_season }})
+                </h5>
+                <span class="badge bg-warning text-dark">Top Runs</span>
+            </div>
+            <div class="p-2">
+                {% for b in rankings.top_batsmen %}
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded" style="background: rgba(255, 183, 3, 0.05); border: 1px solid rgba(255, 183, 3, 0.15);">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-circle bg-warning text-dark fw-bold" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;">
+                            {{ loop.index }}
+                        </span>
+                        <div>
+                            <a href="{{ url_for('predictions', player=b.player, season=rankings_season) }}" class="fw-bold text-white text-decoration-none">
+                                {{ b.player }}
+                            </a>
+                            <div class="small text-muted">SR: {{ b.projected_strike_rate }} &bull; ~{{ b.projected_match_runs }} r/m</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-warning fs-6">{{ b.projected_season_runs }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">runs (14m)</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Column 2: Purple Cap Projections (Top Bowlers) -->
+    <div class="col-lg-4">
+        <div class="ipl-card h-100">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title text-info">
+                    <i class="bi bi-award-fill"></i> Purple Cap Projections ({{ rankings_season }})
+                </h5>
+                <span class="badge bg-info text-dark">Top Wickets</span>
+            </div>
+            <div class="p-2">
+                {% for w in rankings.top_bowlers %}
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded" style="background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.15);">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-circle bg-info text-dark fw-bold" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;">
+                            {{ loop.index }}
+                        </span>
+                        <div>
+                            <a href="{{ url_for('predictions', player=w.player, season=rankings_season) }}" class="fw-bold text-white text-decoration-none">
+                                {{ w.player }}
+                            </a>
+                            <div class="small text-muted">Econ: {{ w.projected_economy_rate }} &bull; ~{{ w.projected_match_wickets }} w/m</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-info fs-6">{{ w.projected_season_wickets }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">wkts (14m)</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Column 3: Tournament MVP Projections -->
+    <div class="col-lg-4">
+        <div class="ipl-card h-100">
+            <div class="ipl-card-header">
+                <h5 class="ipl-card-title text-success">
+                    <i class="bi bi-star-fill"></i> Tournament MVP Projections ({{ rankings_season }})
+                </h5>
+                <span class="badge bg-success text-dark">Top Score</span>
+            </div>
+            <div class="p-2">
+                {% for m in rankings.top_mvps %}
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded" style="background: rgba(6, 214, 160, 0.05); border: 1px solid rgba(6, 214, 160, 0.15);">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-circle bg-success text-dark fw-bold" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;">
+                            {{ loop.index }}
+                        </span>
+                        <div>
+                            <a href="{{ url_for('predictions', player=m.player, season=rankings_season) }}" class="fw-bold text-white text-decoration-none">
+                                {{ m.player }}
+                            </a>
+                            <div class="small text-muted">{{ m.projected_role }}</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-success fs-6">{{ m.projected_performance_score }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">pts/match</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Player Forecast Catalog Table -->
 <div class="ipl-card mb-4">
-    <div class="ipl-card-header">
-        <h5 class="ipl-card-title">
-            <i class="bi bi-list-check text-warning"></i> Match Predictions & Feature Log
-        </h5>
-        <span class="badge bg-secondary">{{ player_data.matches|length }} matches recorded</span>
+    <div class="ipl-card-header flex-wrap gap-2">
+        <div>
+            <h5 class="ipl-card-title">
+                <i class="bi bi-table text-info"></i> Complete Player Forecast Catalog (Season {{ selected_season }})
+            </h5>
+            <div class="text-muted small">All 7 multi-output model predictions across active players</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <input type="text" id="tablePlayerSearch" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search player name..." style="min-width: 200px;">
+            <span class="badge bg-secondary">{{ catalog|length }} Active Forecasts</span>
+        </div>
     </div>
     <div class="ipl-table-container">
-        <table class="ipl-table">
+        <table class="ipl-table" id="playersCatalogTable">
             <thead>
                 <tr>
-                    <th>Date / Match</th>
+                    <th>MVP Rank</th>
+                    <th>Player</th>
+                    <th>Role</th>
                     <th>Season</th>
-                    <th>Match Stats</th>
-                    <th>Actual Score</th>
-                    <th>RF Predicted</th>
-                    <th>Absolute Error</th>
-                    <th>Feature Breakdown</th>
+                    <th>Proj Runs (14m)</th>
+                    <th>Proj Boundaries</th>
+                    <th>Strike Rate</th>
+                    <th>Proj Wkts (14m)</th>
+                    <th>Economy</th>
+                    <th>MVP Score</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                {% for m in player_data.matches %}
-                <tr>
+                {% for r in catalog %}
+                <tr data-player-name="{{ r.player }}">
                     <td>
-                        <strong>{{ m.date }}</strong>
-                        <div class="small text-muted">ID: {{ m.match_id }}</div>
+                        <strong class="{% if r.rank_mvp <= 10 %}text-warning{% else %}text-muted{% endif %}">
+                            #{{ r.rank_mvp }}
+                        </strong>
                     </td>
                     <td>
-                        <span class="badge bg-dark border text-light">{{ m.season }}</span>
+                        <a href="{{ url_for('predictions', player=r.player, season=r.season) }}" class="fw-bold text-white text-decoration-none">
+                            {{ r.player }}
+                        </a>
                     </td>
                     <td>
-                        <div class="small">
-                            <strong>{{ m.batting_runs }}</strong> runs ({{ m.balls_faced }}b, SR: {{ m.strike_rate }})
+                        <span class="badge bg-dark border text-info" style="font-size: 0.75rem;">
+                            {{ r.projected_role }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark border text-light">{{ r.season }}</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-warning">{{ r.projected_season_runs }}</span>
+                        <div class="small text-muted" style="font-size: 0.72rem;">
+                            ~{{ r.projected_match_runs }}/m &bull; CI: [{{ r.confidence_interval_runs[0] }}, {{ r.confidence_interval_runs[1] }}]
                         </div>
-                        <div class="small text-muted">
-                            <strong>{{ m.wickets }}</strong> wkts ({{ m.runs_conceded }}r, Econ: {{ m.economy_rate }})
+                    </td>
+                    <td>
+                        <span class="small">{{ r.projected_fours }} 4s &bull; {{ r.projected_sixes }} 6s</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-info">{{ r.projected_strike_rate }}</span>
+                    </td>
+                    <td>
+                        <span class="fw-bold text-success">{{ r.projected_season_wickets }}</span>
+                        <div class="small text-muted" style="font-size: 0.72rem;">
+                            ~{{ r.projected_match_wickets }}/m &bull; CI: [{{ r.confidence_interval_wickets[0] }}, {{ r.confidence_interval_wickets[1] }}]
                         </div>
                     </td>
                     <td>
-                        <span class="fw-bold text-warning fs-6">{{ m.actual_performance }}</span>
+                        <span class="text-white">{{ r.projected_economy_rate }}</span>
                     </td>
                     <td>
-                        <span class="fw-bold text-info fs-6">{{ m.predicted_performance }}</span>
+                        <span class="fw-bold text-warning fs-6">{{ r.projected_performance_score }}</span>
                     </td>
                     <td>
-                        {% if m.absolute_error <= 10 %}
-                            <span class="error-badge-good">&plusmn;{{ m.absolute_error }}</span>
-                        {% elif m.absolute_error <= 25 %}
-                            <span class="error-badge-mid">&plusmn;{{ m.absolute_error }}</span>
-                        {% else %}
-                            <span class="error-badge-high">&plusmn;{{ m.absolute_error }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-ipl-outline py-1 px-2 btn-toggle-features" data-target="features-{{ loop.index }}">
-                            <i class="bi bi-sliders"></i> View 12 Features
-                        </button>
-                    </td>
-                </tr>
-                <!-- Expandable 12 Features Row -->
-                <tr id="features-{{ loop.index }}" class="d-none" style="background: rgba(11, 19, 35, 0.95);">
-                    <td colspan="7" class="p-3">
-                        <div class="p-3 rounded" style="border: 1px dashed var(--ipl-border-glow);">
-                            <div class="small fw-bold text-info mb-2 text-uppercase">
-                                <i class="bi bi-cpu-fill"></i> Model Input Vectors Fed to Random Forest Regressor:
-                            </div>
-                            <div class="row g-2 small">
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Performance:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_performance }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Balls Faced:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_balls_faced }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Balls Bowled:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_balls_bowled }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Strike Rate:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_strike_rate }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Previous Matches:</span>
-                                    <strong class="text-white">{{ m.features.previous_matches }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Consistency (Std Dev):</span>
-                                    <strong class="text-white">{{ m.features.previous_std_performance }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Economy Rate:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_economy_rate }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Bowling Avg:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_bowling_average }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Season:</span>
-                                    <strong class="text-white">{{ m.features.season }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Runs:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_runs }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Most Recent Performance:</span>
-                                    <strong class="text-white">{{ m.features.previous_performance }}</strong>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-muted">Prev Avg Wickets:</span>
-                                    <strong class="text-white">{{ m.features.previous_avg_wickets }}</strong>
-                                </div>
-                            </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <a href="{{ url_for('predictions', player=r.player, season=r.season) }}" class="btn btn-sm btn-ipl-outline py-0 px-2" title="View Full Forecast">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('predict', player=r.player) }}" class="btn btn-sm btn-ipl-gold py-0 px-2" title="Simulate in Live Studio">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>
@@ -236,12 +473,12 @@
 {% else %}
 <div class="ipl-card text-center p-5">
     <i class="bi bi-exclamation-circle text-warning fs-1 mb-3"></i>
-    <h4>No Predictions Available for "{{ selected_player }}"</h4>
+    <h4>No Future Forecasts Available for "{{ selected_player }}"</h4>
     <p class="text-muted">
-        The player may not have been part of the 2021–2023 Random Forest test split. You can still view their complete career history in the Player Explorer.
+        This player may not have sufficient recent rolling records to project future seasons.
     </p>
-    <a href="{{ url_for('player_detail', player_name=selected_player) }}" class="btn btn-ipl-gold">
-        View {{ selected_player }} Career Profile
+    <a href="{{ url_for('predictions', player='V Kohli', season='2024') }}" class="btn btn-ipl-gold">
+        View Virat Kohli Forecast
     </a>
 </div>
 {% endif %}
@@ -249,11 +486,11 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if player_data and player_data.matches %}
+{% if player_forecast and player_forecast.chart_data %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var matchesData = {{ player_data.matches|tojson }};
-        renderPredictionsTimelineChart('predictionsTimelineChart', matchesData);
+        var chartData = {{ player_forecast.chart_data|tojson }};
+        renderFutureTrajectoryChart('futureTrajectoryChart', chartData);
     });
 </script>
 {% endif %}

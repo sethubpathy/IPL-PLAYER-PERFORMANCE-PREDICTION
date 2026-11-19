@@ -1,0 +1,134 @@
+{
+  "check_1_target_columns": {
+    "status": "PASSED",
+    "dataset_path": "IPL_Player_Match_Performance.csv",
+    "target_columns_found": [
+      "batting_runs",
+      "fours",
+      "sixes",
+      "strike_rate",
+      "wickets",
+      "economy_rate",
+      "performance_score"
+    ],
+    "target_dtypes": {
+      "batting_runs": "int64",
+      "fours": "int64",
+      "sixes": "int64",
+      "strike_rate": "float64",
+      "wickets": "int64",
+      "economy_rate": "float64",
+      "performance_score": "int64"
+    }
+  },
+  "check_2_training_records": {
+    "status": "PASSED",
+    "total_match_records": 21716,
+    "unique_matches": 1024,
+    "unique_players": 695,
+    "seasons_covered": "2008 to 2023 (16 seasons)",
+    "date_range": "01/04/2010 to 31/10/2020",
+    "chronological_train_set": "17,152 records (Seasons 2008\u20132020)",
+    "chronological_held_out_test_set": "4,564 records (Seasons 2021\u20132023)"
+  },
+  "check_3_joblib_model": {
+    "status": "PASSED",
+    "model_path": "models/ipl_multi_output_rf.joblib",
+    "file_size_mb": 10.76,
+    "model_architecture": "Multi-Output Random Forest Regressor",
+    "n_outputs": 7,
+    "n_estimators": 150,
+    "max_depth": 12,
+    "feature_count": 12,
+    "target_columns_registered": [
+      "batting_runs",
+      "fours",
+      "sixes",
+      "strike_rate",
+      "wickets",
+      "economy_rate",
+      "performance_score"
+    ],
+    "player_store_count": 695,
+    "dummy_inference_shape": [
+      1,
+      7
+    ]
+  },
+  "check_4_and_5_api_variations": {
+    "status": "PASSED",
+    "combinations_tested": 4,
+    "results": [
+      {
+        "test_profile": "Combination 1: Elite Top-Order Batsman",
+        "projected_role": "Batsman",
+        "predictions": {
+          "batting_runs": 30.54,
+          "fours": 3.0,
+          "sixes": 1.14,
+          "strike_rate": 121.27,
+          "wickets": 0.01,
+          "economy_rate": 0.0,
+          "performance_score": 30.74
+        }
+      },
+      {
+        "test_profile": "Combination 2: Premier Strike Bowler",
+        "projected_role": "Strike Bowler",
+        "predictions": {
+          "batting_runs": 3.07,
+          "fours": 0.2,
+          "sixes": 0.13,
+          "strike_rate": 43.22,
+          "wickets": 0.99,
+          "economy_rate": 7.96,
+          "performance_score": 22.87
+        }
+      },
+      {
+        "test_profile": "Combination 3: Dynamic All-Rounder",
+        "projected_role": "Batsman",
+        "predictions": {
+          "batting_runs": 18.3,
+          "fours": 1.51,
+          "sixes": 0.83,
+          "strike_rate": 124.69,
+          "wickets": 0.65,
+          "economy_rate": 7.31,
+          "performance_score": 31.3
+        }
+      },
+      {
+        "test_profile": "Combination 4: Explosive Finisher",
+        "projected_role": "Batsman",
+        "predictions": {
+          "batting_runs": 21.89,
+          "fours": 1.67,
+          "sixes": 1.35,
+          "strike_rate": 126.72,
+          "wickets": 0.4,
+          "economy_rate": 4.62,
+          "performance_score": 29.89
+        }
+      }
+    ]
+  },
+  "check_6_frontend_dynamic": {
+    "status": "PASSED",
+    "template_file": "templates/prediction_studio.html",
+    "api_call_verified": "fetch(\"/api/predict\", { method: \"POST\", ... })",
+    "dom_targets_bound": [
+      "res_batting_runs",
+      "res_fours",
+      "res_sixes",
+      "res_strike_rate",
+      "res_wickets",
+      "res_economy",
+      "res_perf_score",
+      "res_projected_role"
+    ],
+    "static_hardcoded_numbers_present": false,
+    "radar_chart_dynamic": true,
+    "audit_table_dynamic": true
+  }
+}
