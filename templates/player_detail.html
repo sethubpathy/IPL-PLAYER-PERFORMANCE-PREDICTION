@@ -40,11 +40,9 @@
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-            {% if profile.has_predictions %}
-            <a href="{{ url_for('predictions', player=profile.player, season=profile.selected_season if profile.selected_season in ['2021', '2022', '2023'] else 'All') }}" class="btn btn-ipl-gold">
-                <i class="bi bi-cpu-fill"></i> View RF Predictions
+            <a href="{{ url_for('predictions', player=profile.player, season='2024') }}" class="btn btn-ipl-gold">
+                <i class="bi bi-cpu-fill"></i> View 2024–2027 Forecasts
             </a>
-            {% endif %}
             <a href="{{ url_for('compare', p1=profile.player) }}" class="btn btn-ipl-outline">
                 <i class="bi bi-arrow-left-right"></i> Compare Player
             </a>

@@ -36,8 +36,10 @@
                     {% endfor %}
                 </select>
             </div>
-            <div style="min-width: 170px;">
-                <label class="form-label small text-muted mb-1">Forecast Season</label>
+            <div style="min-width: 200px;">
+                <label class="form-label small text-muted mb-1">
+                    <i class="bi bi-calendar-event text-warning"></i> Forecast Season
+                </label>
                 <select name="season" class="form-select ipl-select" onchange="this.form.submit()">
                     <option value="2024" {% if selected_season == '2024' %}selected{% endif %}>
                         Season 2024 (Immediate)
@@ -63,15 +65,39 @@
     </div>
 </div>
 
-<!-- Quick Player Shortcuts -->
+<!-- Quick Horizon & Player Shortcuts -->
 <div class="ipl-card mb-4 p-3">
-    <div class="d-flex align-items-center flex-wrap gap-2">
-        <span class="small fw-bold text-muted text-uppercase me-2">Frequent Stars:</span>
-        {% for star in ['V Kohli', 'RG Sharma', 'MS Dhoni', 'Shubman Gill', 'Rashid Khan', 'JJ Bumrah', 'F du Plessis', 'KL Rahul', 'RA Jadeja', 'Mohammed Shami', 'YS Chahal', 'AD Russell'] %}
-        <a href="{{ url_for('predictions', player=star, season=selected_season) }}" class="player-pill {% if star == selected_player %}active{% endif %}">
-            {{ star }}
-        </a>
-        {% endfor %}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="small fw-bold text-muted text-uppercase me-2">
+                <i class="bi bi-calendar-check text-info"></i> Forecast Horizon:
+            </span>
+            <a href="{{ url_for('predictions', player=selected_player, season='2024') }}" class="player-pill {% if selected_season == '2024' %}active{% endif %}">
+                2024 (t+1)
+            </a>
+            <a href="{{ url_for('predictions', player=selected_player, season='2025') }}" class="player-pill {% if selected_season == '2025' %}active{% endif %}">
+                2025 (t+2)
+            </a>
+            <a href="{{ url_for('predictions', player=selected_player, season='2026') }}" class="player-pill {% if selected_season == '2026' %}active{% endif %}">
+                2026 (t+3)
+            </a>
+            <a href="{{ url_for('predictions', player=selected_player, season='2027') }}" class="player-pill {% if selected_season == '2027' %}active{% endif %}">
+                2027 (t+4)
+            </a>
+            <a href="{{ url_for('predictions', player=selected_player, season='All') }}" class="player-pill {% if selected_season == 'All' %}active{% endif %}">
+                All 4 Seasons
+            </a>
+        </div>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="small fw-bold text-muted text-uppercase me-1">
+                <i class="bi bi-star text-warning"></i> Stars:
+            </span>
+            {% for star in ['V Kohli', 'RG Sharma', 'MS Dhoni', 'Shubman Gill', 'Rashid Khan', 'JJ Bumrah', 'F du Plessis', 'AD Russell'] %}
+            <a href="{{ url_for('predictions', player=star, season=selected_season) }}" class="player-pill {% if star == selected_player %}active{% endif %}" style="font-size: 0.78rem;">
+                {{ star }}
+            </a>
+            {% endfor %}
+        </div>
     </div>
 </div>
 
